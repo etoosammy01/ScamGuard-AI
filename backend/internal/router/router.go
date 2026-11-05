@@ -45,7 +45,11 @@ func New(db handlers.Pinger, origins []string, options ...AuthOptions) http.Hand
 		}
 	}
 	r.NoRoute(func(c *gin.Context) { handlers.Error(c, 404, "not_found", "Resource not found") })
-	timed := http.TimeoutHandler(r, 5*time.Second, `{"error":{"code":"request_timeout","message":"Request timed out"}}`)
+	requestTimeout := 5 * time.Second
+	if len(options) > 0 && options[0].Config.AITimeout > 0 {
+		requestTimeout = options[0].Config.AITimeout + 3*time.Second
+	}
+	timed := http.TimeoutHandler(r, requestTimeout, `{"error":{"code":"request_timeout","message":"Request timed out"}}`)
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		timed.ServeHTTP(w, req)

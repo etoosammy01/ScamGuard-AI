@@ -1,7 +1,7 @@
 name: ScamGuard CI
 on:
   push:
-    branches: [main, feature/phase-1-foundation, feature/phase-2-authentication, feature/phase-3-detection-engine]
+    branches: [main, feature/phase-1-foundation, feature/phase-2-authentication, feature/phase-3-detection-engine, feature/phase-4-ai-detection]
   pull_request:
     branches: [main]
 permissions:

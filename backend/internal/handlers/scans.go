@@ -13,8 +13,8 @@ type ScanStore interface {
 	Create(ctx context.Context, owner string, result models.ScanResult) (models.ScanResult, error)
 }
 type ScanService interface {
-	Message(string) models.ScanResult
-	URL(string) (models.ScanResult, error)
+	AnalyzeMessage(context.Context, string, string, string) models.ScanResult
+	AnalyzeURL(context.Context, string, string, string) (models.ScanResult, error)
 }
 type ScanHandler struct {
 	Store   ScanStore
@@ -23,7 +23,8 @@ type ScanHandler struct {
 
 func (h *ScanHandler) Message(c *gin.Context) {
 	var body struct {
-		Content string `json:"content"`
+		Content      string `json:"content"`
+		AnalysisMode string `json:"analysis_mode"`
 	}
 	if !decode(c, &body) {
 		return
@@ -33,12 +34,20 @@ func (h *ScanHandler) Message(c *gin.Context) {
 		return
 	}
 	identity := c.MustGet(models.IdentityKey).(models.Identity)
-	result := h.Service.Message(body.Content)
+	if body.AnalysisMode != "" && body.AnalysisMode != "rules" && body.AnalysisMode != "hybrid" {
+		Error(c, 400, "invalid_input", "analysis_mode must be rules or hybrid")
+		return
+	}
+	if body.AnalysisMode == "" {
+		body.AnalysisMode = "rules"
+	}
+	result := h.Service.AnalyzeMessage(c.Request.Context(), identity.ID, body.Content, body.AnalysisMode)
 	h.persist(c, identity.ID, result)
 }
 func (h *ScanHandler) URL(c *gin.Context) {
 	var body struct {
-		URL string `json:"url"`
+		URL          string `json:"url"`
+		AnalysisMode string `json:"analysis_mode"`
 	}
 	if !decode(c, &body) {
 		return
@@ -47,12 +56,19 @@ func (h *ScanHandler) URL(c *gin.Context) {
 		Error(c, 400, "invalid_input", "URL must contain 1 to 2,048 bytes")
 		return
 	}
-	result, err := h.Service.URL(body.URL)
+	if body.AnalysisMode != "" && body.AnalysisMode != "rules" && body.AnalysisMode != "hybrid" {
+		Error(c, 400, "invalid_input", "analysis_mode must be rules or hybrid")
+		return
+	}
+	if body.AnalysisMode == "" {
+		body.AnalysisMode = "rules"
+	}
+	identity := c.MustGet(models.IdentityKey).(models.Identity)
+	result, err := h.Service.AnalyzeURL(c.Request.Context(), identity.ID, body.URL, body.AnalysisMode)
 	if err != nil {
 		Error(c, 400, "invalid_url", "Enter a valid HTTP or HTTPS URL")
 		return
 	}
-	identity := c.MustGet(models.IdentityKey).(models.Identity)
 	h.persist(c, identity.ID, result)
 }
 func (h *ScanHandler) persist(c *gin.Context, owner string, result models.ScanResult) {

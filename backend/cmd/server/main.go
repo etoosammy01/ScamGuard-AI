@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/etoosammy01/ScamGuard-AI/backend/internal/ai"
 	"github.com/etoosammy01/ScamGuard-AI/backend/internal/config"
 	"github.com/etoosammy01/ScamGuard-AI/backend/internal/database"
 	"github.com/etoosammy01/ScamGuard-AI/backend/internal/repository"
@@ -40,7 +41,17 @@ func run() error {
 		return errors.New("password service initialization failed")
 	}
 	auth := &services.Auth{Store: &repository.Accounts{DB: db}, Passwords: passwords, Lifetime: c.SessionLifetime}
-	s := &http.Server{Addr: ":" + c.Port, Handler: router.New(db, c.Origins, router.AuthOptions{Service: auth, Config: c, ScanStore: &repository.Scans{DB: db}, ScanService: services.Detection{}}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
+	var analyzer ai.Analyzer
+	if c.AIEnabled {
+		client, clientErr := ai.NewClient(c.OpenAIAPIKey, c.OpenAIModel, c.AITimeout, c.AIMaxOutputTokens)
+		if clientErr != nil {
+			return errors.New("AI service initialization failed")
+		}
+		analyzer = client
+	}
+	detectionService := services.NewDetection(analyzer, services.NewAIUserRateLimiter(5, time.Hour))
+	writeTimeout := c.AITimeout + 5*time.Second
+	s := &http.Server{Addr: ":" + c.Port, Handler: router.New(db, c.Origins, router.AuthOptions{Service: auth, Config: c, ScanStore: &repository.Scans{DB: db}, ScanService: detectionService}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: writeTimeout, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
 	done := make(chan error, 1)
 	go func() { slog.Info("server listening", "port", c.Port); done <- s.ListenAndServe() }()
 	select {

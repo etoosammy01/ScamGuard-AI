@@ -1,0 +1,8 @@
+.ai-opt-in{display:flex;align-items:center;gap:10px;padding:13px;border:1px solid #344765;border-radius:8px;background:#101d30;color:#e5efff;cursor:pointer}
+.scan-form .ai-opt-in input{width:17px;height:17px;padding:0;accent-color:#5596ff;cursor:pointer}
+.ai-privacy,.ai-fallback{padding:12px 14px;border:1px solid #735f36;border-radius:8px;background:#2b2518;color:#f3dca7;font-size:12px;line-height:1.6}
+.ai-assessment{padding:14px;border:1px solid #344765;border-radius:8px;background:#101d30}
+.ai-assessment h3{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
+.ai-assessment h3 span{color:#aabbd3;font-size:11px;font-weight:500}
+.ai-assessment p,.ai-assessment li{font-size:12px;line-height:1.7;color:#c5d2e5}
+.ai-assessment ul{padding-left:18px}
