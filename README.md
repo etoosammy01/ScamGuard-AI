@@ -2,7 +2,7 @@
 
 ScamGuard AI is a scam and phishing awareness platform in development. It helps people assess suspicious messages and links before they trust, click, or share. Its current deterministic rules explain common threat indicators and support safer decisions.
 
-## Current status: Phase 4
+## Current status: Phase 5
 
 Implemented:
 
@@ -13,10 +13,12 @@ Implemented:
 - Versioned migrations, automated backend/frontend tests, browser authentication smoke tests, and GitHub Actions.
 - Deterministic message and URL risk analysis with scored, explainable indicators, categories, and recommendations; scans require an authenticated session.
 - Real responsive message and URL scanner pages, backed by `/api/v1/scans/message` and `/api/v1/scans/url`.
-- Scan history saves only analysis metadata and triggered indicators. Raw message and URL inputs are not persisted.
+- Scan history persists only result metadata, explanations/recommendations, and triggered indicators. Raw message and URL inputs are not persisted.
 - Optional OpenAI structured analysis, enabled only when requested per scan and configured by backend environment variables. Deterministic rules remain available without an AI key.
+- Authenticated, owner-scoped scan history with filtering, stable pagination, details, CSV export, and individual or bulk deletion.
+- Real per-user dashboard totals, risk distribution, UTC activity timeline, category counts, and recent scans.
 
-**Scanning is advisory and cannot guarantee safety; false positives and false negatives are possible.** AI output is an uncalibrated qualitative aid, not a statistically validated probability. Dashboard metrics remain clearly marked fictional demos; scan-history and analytics UI are reserved for Phase 5. External URL fetching, email verification, password reset, and MFA are not implemented.
+**Scanning is advisory and cannot guarantee safety; false positives and false negatives are possible.** AI output is an uncalibrated qualitative aid, not a statistically validated probability. Authenticated dashboard/history metrics come from the signed-in user's retained scan metadata; the public homepage preview is explicitly marked demo data. External URL fetching, email verification, password reset, and MFA are not implemented.
 
 ## Architecture and stack
 
@@ -156,8 +158,16 @@ Use separate least-privileged runtime and migration database roles in production
 | `PATCH /api/v1/users/me` | Session + trusted Origin | Optional `full_name` and/or `bio` (500 characters); returns updated user |
 | `POST /api/v1/scans/message` | Session + trusted Origin | JSON `{ "content": "...", "analysis_mode": "rules" }`; rules by default, optional hybrid analysis |
 | `POST /api/v1/scans/url` | Session + trusted Origin | JSON `{ "url": "https://...", "analysis_mode": "rules" }`; optional hybrid analysis, no fetching or DNS lookup |
+| `GET /api/v1/scans` | Session | Owner-only paginated history; `page` (default 1), `page_size` (default 20, max 100), `risk_level`, `scan_type`, `category`, `from`, `to`, `search`; newest first with stable ID tie-breaker |
+| `GET /api/v1/scans/:id` | Session | Owner-only metadata; another user's ID is indistinguishable from a missing scan |
+| `DELETE /api/v1/scans/:id` | Session + trusted Origin | Delete one owned scan; 204 or 404 |
+| `DELETE /api/v1/scans` | Session + trusted Origin | Delete all scans owned by the current user; returns deleted count |
+| `GET /api/v1/scans/export` | Session | Owner-only filtered CSV, capped at 10,000 rows |
+| `GET /api/v1/dashboard/stats` | Session | Real owner-only totals, risk counts, top categories, 30 UTC calendar days, rolling 7/30-day counts, and AI/rules counts |
 
 Scan requests may include `"analysis_mode":"hybrid"` to opt into external AI processing. Omission or `"rules"` preserves rules-only behavior. Hybrid mode retains the same response envelope and adds `analysis_mode`, `ai_status`, `rule_score`, `final_score`, and (only on successful AI completion) `ai_assessment`. `ai_status` is `not_requested`, `disabled`, `completed`, `unavailable`, `validation_failed`, or `rate_limited`; fallbacks are never presented as AI completion. Each user may request at most five hybrid analyses per hour per process. AI requests use OpenAI's Responses API structured JSON output with `store:false`, no tools, no URL fetching, and backend-only credentials. Select an `OPENAI_MODEL` your account supports; for example, OpenAI documents `gpt-4o-mini` as supporting Structured Outputs, but availability and access depend on the account. See the [Structured Outputs documentation](https://developers.openai.com/api/docs/guides/structured-outputs).
+
+History `from`/`to` accept ISO dates (inclusive calendar dates) or RFC3339 timestamps. Search examines retained type, risk, category, analysis mode, and indicator metadata only. Dashboard 7- and 30-day counts are rolling windows from the query time; the activity chart shows the current UTC date plus the prior 29 UTC calendar dates. AI-assisted means the provider analysis completed; rules-only counts explicit rules-mode scans. Hybrid attempts that fell back are shown in neither count.
 
 Public user fields: `id`, `full_name`, `email`, `bio`, `role`, `created_at`. Profile identity comes from the session; client-supplied account IDs, email, role, hash, and timestamp changes are rejected. Errors use `{ "error": { "code": "...", "message": "..." } }`. Common statuses: 400 invalid fields/body, 401 invalid credentials/session, 403 Origin/authorization failure, 415 unsupported media type, 429 throttled (with Retry-After), 503 temporarily unavailable. Error responses never include SQL, stack traces, or secret values.
 
@@ -204,7 +214,8 @@ The runner discovers embedded SQL versions, uses the existing `schema_migrations
 - `001_initial`: preserved unchanged; users, scans, original constraints/indexes, update timestamp trigger.
 - `002_authentication`: adds optional bio (default empty), a unique index on `lower(btrim(email))`, and sessions with user foreign key/cascade deletion, unique 32-byte token hash, creation/expiry/revocation timestamps, and user/expiry indexes. Existing users/scans remain intact. Conflicting legacy emails must be resolved before migration; the migration fails atomically rather than silently deleting/merging accounts.
 - `003_private_scans`: removes legacy raw `input_text` and free-text `explanation` from existing scan rows, preserving IDs, ownership, timestamps, and score; adds constrained category and JSONB indicators; restricts scan types to supported types and reclassifies old risk levels to the Phase 3 score bands. It never copies raw old input into a new field. Rollback restores schema shape with a fixed redaction marker and empty explanation; deleted content cannot be recovered.
-- `004_ai_analysis`: adds constrained `analysis_mode`, `ai_status`, and `rule_score` metadata, extends categories for Phase 4 classifications, and preserves existing rows. AI explanations and prose recommendations are response-only and are not persisted.
+- `004_ai_analysis`: adds constrained `analysis_mode`, `ai_status`, and `rule_score` metadata, extends categories for Phase 4 classifications, and preserves existing rows. At this point explanations and recommendations were response-only.
+- `005_scan_history`: adds bounded explanation and JSON recommendation metadata for newly saved results (without restoring any original submission), plus owner/filter/time indexes. Existing rows receive a legacy explanation marker and empty recommendations; prior provider prose cannot be reconstructed. Rollback removes these additions and indexes without deleting scan records.
 - Rolling back `002` invalidates all sessions and removes bio values and the additional normalized-email index, while retaining Phase 1 users/scans. Rolling back `001` removes the initial schema and is destructive.
 
 ## Detection engine
@@ -245,7 +256,7 @@ Supported provisional categories: phishing, bank impersonation, credential theft
 
 Rules-only limits: language matching is English-oriented and cannot infer intent or verify sender identity. Novel scams and benign brand mentions can be missed or flagged. The known-shortener list is static. IDN/punycode is a warning, not a proof of maliciousness. Only the first detected category appears as the primary `category`; the UI shows its triggered indicators. No external URL fetch, redirect inspection, DNS/IP reputation, attachment analysis, or email header analysis is implemented.
 
-Privacy: scanner request bodies are size-limited and excluded from logs. Submitted content is used in memory for analysis only; scan persistence writes owner, type, score, level, category, indicators, and timestamp. It does not store original messages, URLs, passwords, or embedded URLs. Result indicators can still reveal some context, so retain them only as long as needed; future phases should add configurable retention, deletion/export controls, and clear consent before accepting sensitive material. Do not paste passwords, OTPs, payment details, or confidential content.
+Privacy: scanner request bodies are size-limited and excluded from logs. Submitted content is used in memory for analysis only; retained records include owner linkage, type, score, level, category, analysis mode/status, rule score, triggered indicators, recommendations/explanation, and timestamp. Original messages, URLs, passwords, and embedded URLs are not persisted. Users can export retained metadata and delete one or all scans from History. Deletion removes live database rows and updates metrics immediately; backups and third-party provider retention are separate and are not represented as deleted by these controls. Indicators and recommendations may reveal context, so do not submit passwords, OTPs, payment details, or confidential content. Automatic retention remains future work.
 
 URL scanning currently never performs network access. Before any later fetch feature, implement SSRF controls at both application and network layers: deny local/private/link-local/reserved IPv4 and IPv6, inspect and pin validated resolved addresses to prevent rebinding, validate every redirect and final connection, restrict egress, reject credentials and unsafe ports, and enforce response, redirect, and time limits in an isolated worker. Never forward cookies or authorization headers.
 
@@ -287,7 +298,7 @@ npm run build
 npm start
 ```
 
-Type checking generates Next.js route types first, so it works on fresh clones. Unit/component tests cover form validation, login error handling, credentialed logout requests, session loading, redirect decisions, scan API requests and response validation, and the clearly marked public demo. The scanner API tests do not replace the authenticated Chrome scan flow in CI. The scoped minimatch override addresses development-tooling advisories; remove it when upstream dependency ranges catch up. Some Next.js plugins still emit ESLint 10 peer-range warnings, but clean installation and lint are validated with the lockfile.
+Type checking generates Next.js route types first, so it works on fresh clones. Unit/component tests cover form validation, login error handling, credentialed logout requests, session loading, redirect decisions, scan/history API requests and response validation, and the clearly marked public demo. The scanner API tests do not replace the authenticated Chrome scan flow in CI. The scoped minimatch override addresses development-tooling advisories; remove it when upstream dependency ranges catch up. Some Next.js plugins still emit ESLint 10 peer-range warnings, but clean installation and lint are validated with the lockfile.
 
 For the browser flow, start the API and production frontend against a disposable database, then launch a separate Chrome profile:
 
@@ -298,7 +309,7 @@ google-chrome --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
 npm run test:browser
 ```
 
-The Chrome profile/debug port are for automated local/CI testing only; keep them loopback-bound and stop Chrome afterward. The browser test uses Node's built-in WebSocket client, creates a unique synthetic account, and tests registration validation, login errors, dashboard authentication, cookie flags, refresh persistence, guest redirects, authenticated message and URL scan results, responsive layout, persisted profile edits, logout/token revocation, and invalidated-session redirects. Configure `SMOKE_APP_URL`, `SMOKE_API_URL`, or `CHROME_DEBUG_URL` if needed. Synthetic test accounts and scan metadata remain in the disposable database until it is discarded.
+The Chrome profile/debug port are for automated local/CI testing only; keep them loopback-bound and stop Chrome afterward. The browser test uses Node's built-in WebSocket client, creates a unique synthetic account, and tests registration validation, login errors, dashboard authentication, cookie flags, refresh persistence, guest redirects, authenticated message and URL scan results, owner history and details, responsive layout, persisted profile edits, logout/token revocation, and invalidated-session redirects. Configure `SMOKE_APP_URL`, `SMOKE_API_URL`, or `CHROME_DEBUG_URL` if needed. Synthetic test accounts and scan metadata remain in the disposable database until it is discarded.
 
 CI runs Go tests with PostgreSQL 17, migration up/up/down/up, race detection, vet, backend build, frontend lint/types/tests/build, and the real Chrome authentication flow. It does not deploy or merge changes.
 
@@ -308,13 +319,13 @@ Request logs contain method, registered route, status, and timing; they exclude 
 
 Names, emails, bios, password hashes, and session metadata are now stored. Treat them as personal data: protect database/backups, limit access, document retention/deletion, and avoid sensitive bios. Password reset, email verification, MFA, account deletion/export, distributed throttling, and session-list/revoke-all UX are future work, not hidden capabilities.
 
-Phase 3 avoids saving raw scan input, but users may still submit confidential information. Scan records retain account linkage and triggered indicators. Protect backups and restrict database access, establish a retention period, and add deletion/export controls before broad production use. Phase 1's `ON DELETE SET NULL` only removes the scan's user link; it does not remove result metadata. The Phase 3 migration deletes legacy raw inputs from existing rows.
+Phase 3 avoids saving raw scan input, but users may still submit confidential information. Scan records retain account linkage and triggered indicators. Protect backups and restrict database access. Phase 1's `ON DELETE SET NULL` only removes the scan's user link; it does not remove result metadata. The Phase 3 migration deletes legacy raw inputs from existing rows.
 
 Before external URL fetching, implement SSRF protection: HTTP(S) only; reject credentials/unexpected ports; block loopback/private/link-local/reserved IPv4/IPv6 destinations; defend against DNS rebinding; validate each redirect and the actual connection address; restrict outbound networking; isolate workers; never forward credentials; enforce timeout, response-size, and redirect limits. Fetched content is untrusted. Future AI assessments will be advisory and cannot guarantee safety.
 
 ## Roadmap and contributions
 
-Phase 1 and Phase 2 foundations are merged. Phase 3 provides deterministic, explainable rules; Phase 4 adds optional AI second-opinion analysis. Phase 5 may add user-facing scan history and analytics. External URL fetching remains out of scope.
+Phases 1–4 provide the application foundation, authentication, local deterministic analysis, and optional AI second opinions. Phase 5 adds retained result history and analytics. Planned work includes configurable automatic retention and account data lifecycle controls. External URL fetching remains out of scope.
 
 Branch from current `main`, use focused commits, run the checks above, and document behavior, tests, and limitations in a pull request. Never commit real credentials, environment files, browser profiles, or user data. Do not merge automatically.
 

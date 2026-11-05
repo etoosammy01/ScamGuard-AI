@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./scan-ai.css";
+@import "./history-dashboard.css";
 :root {
   --bg: #090f1d;
   --surface: #101929;

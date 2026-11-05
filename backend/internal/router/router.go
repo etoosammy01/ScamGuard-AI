@@ -43,6 +43,15 @@ func New(db handlers.Pinger, origins []string, options ...AuthOptions) http.Hand
 			protected.POST("/scans/message", limiter.Middleware(), scans.Message)
 			protected.POST("/scans/url", limiter.Middleware(), scans.URL)
 		}
+		if option.ScanStore != nil {
+			history := &handlers.ScanHistory{Store: option.ScanStore}
+			protected.GET("/dashboard/stats", history.Stats)
+			protected.GET("/scans", history.List)
+			protected.GET("/scans/export", middleware.NewUserRateLimiter(5, time.Hour).Middleware(), history.Export)
+			protected.DELETE("/scans", history.DeleteAll)
+			protected.GET("/scans/:id", history.Get)
+			protected.DELETE("/scans/:id", history.Delete)
+		}
 	}
 	r.NoRoute(func(c *gin.Context) { handlers.Error(c, 404, "not_found", "Resource not found") })
 	requestTimeout := 5 * time.Second

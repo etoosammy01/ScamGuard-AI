@@ -31,6 +31,7 @@ export function AccountNav() {
         </Link>
         <div className="account-links">
           <Link href="/dashboard">Dashboard</Link>
+          <Link href="/history">History</Link>
           <Link href="/profile">Profile</Link>
           {state.status === "authenticated" && (
             <Button
