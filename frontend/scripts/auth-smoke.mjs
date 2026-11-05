@@ -155,7 +155,14 @@ try {
   await waitFor(`!!document.querySelector('.result-card')`, "URL scan result");
   console.log("Authenticated message and URL scans returned real rule-based results");
   await navigate("/dashboard");
-  await waitFor(`document.body.innerText.includes('history and analytics in Phase 5')`, "Phase 5 history placeholder");
+  await waitFor(`document.body.innerText.includes('Total scans') && document.body.innerText.includes('Recent scans')`, "authenticated dashboard history and analytics");
+  assert(await evaluate(`document.body.innerText.includes('2') && document.body.innerText.includes('View Scan History')`), "real saved scan data appears on dashboard");
+  await navigate("/history");
+  await waitFor(`!!document.querySelector('.history-count') && document.querySelectorAll('.history-table tbody tr').length===2`, "owner scan history");
+  await evaluate(`document.querySelector('.history-table tbody a').click()`);
+  await waitFor(`!!document.querySelector('.scan-detail-card') && document.body.innerText.includes('unavailable; original content is not stored')`, "retained scan details and privacy disclosure");
+  await navigate("/dashboard");
+  await waitFor(`document.body.innerText.includes('Total scans')`, "dashboard after details navigation");
   const { cookies } = await call("Storage.getCookies");
   const session = cookies.find(
     (cookie) =>

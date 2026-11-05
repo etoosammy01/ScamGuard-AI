@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -239,6 +240,53 @@ func TestAuthenticationIntegration(t *testing.T) {
 				want = 429
 			}
 			requireCode(status, want)
+		}
+	})
+	t.Run("history, dashboard, export, and deletion remain owner-scoped", func(t *testing.T) {
+		requireCode(request(app, "GET", "/api/v1/scans", "", "", nil), 401)
+		requireCode(request(app, "GET", "/api/v1/dashboard/stats", "", "", nil), 401)
+		listed := request(app, "GET", "/api/v1/scans?page=1&page_size=1", "", "", cookie)
+		requireCode(listed, 200)
+		var page struct {
+			Items []struct {
+				ScanID string `json:"scan_id"`
+			} `json:"items"`
+			Total int `json:"total"`
+		}
+		if err := json.Unmarshal(listed.Body.Bytes(), &page); err != nil || len(page.Items) != 1 || page.Total != 2 {
+			t.Fatalf("pagination returned unexpected history: %+v %v", page, err)
+		}
+		id := page.Items[0].ScanID
+		stats := request(app, "GET", "/api/v1/dashboard/stats", "", "", cookie)
+		requireCode(stats, 200)
+		if !strings.Contains(stats.Body.String(), `"total_scans":2`) || !strings.Contains(stats.Body.String(), `"activity":[`) {
+			t.Fatalf("unexpected real dashboard stats: %s", stats.Body.String())
+		}
+		requireCode(request(app, "GET", "/api/v1/scans/"+id, "", "", cookie), 200)
+		requireCode(request(app, "GET", "/api/v1/scans/00000000-0000-0000-0000-000000000000", "", "", cookie), 404)
+		exported := request(app, "GET", "/api/v1/scans/export", "", "", cookie)
+		requireCode(exported, 200)
+		rows, err := csv.NewReader(strings.NewReader(exported.Body.String())).ReadAll()
+		if err != nil || len(rows) != 3 || rows[0][0] != "Scan ID" {
+			t.Fatalf("invalid metadata export: rows=%d err=%v", len(rows), err)
+		}
+		requireCode(request(app, "DELETE", "/api/v1/scans/"+id, "", "https://evil.example", cookie), 403)
+		requireCode(request(app, "DELETE", "/api/v1/scans/"+id, "", origin, cookie), 204)
+		stats = request(app, "GET", "/api/v1/dashboard/stats", "", "", cookie)
+		if !strings.Contains(stats.Body.String(), `"total_scans":1`) {
+			t.Fatalf("deleted scan remained in dashboard: %s", stats.Body.String())
+		}
+		bulk := request(app, "DELETE", "/api/v1/scans", "", origin, cookie)
+		requireCode(bulk, 200)
+		var count struct {
+			Deleted int `json:"deleted"`
+		}
+		if err := json.Unmarshal(bulk.Body.Bytes(), &count); err != nil || count.Deleted != 1 {
+			t.Fatalf("bulk delete count=%+v err=%v", count, err)
+		}
+		stats = request(app, "GET", "/api/v1/dashboard/stats", "", "", cookie)
+		if !strings.Contains(stats.Body.String(), `"total_scans":0`) {
+			t.Fatalf("bulk-deleted scans remained in dashboard: %s", stats.Body.String())
 		}
 	})
 	t.Run("fresh login rotates current session", func(t *testing.T) {

@@ -60,7 +60,7 @@ func TestCORS(t *testing.T) {
 		origin, method, requested string
 		code                      int
 		allow                     bool
-	}{{"http://localhost:3000", "GET", "", 200, true}, {"https://evil.example", "GET", "", 403, false}, {"null", "GET", "", 403, false}, {"", "GET", "", 200, false}, {"http://localhost:3000", "OPTIONS", "GET", 204, true}, {"http://localhost:3000", "OPTIONS", "DELETE", 405, true}} {
+	}{{"http://localhost:3000", "GET", "", 200, true}, {"https://evil.example", "GET", "", 403, false}, {"null", "GET", "", 403, false}, {"", "GET", "", 200, false}, {"http://localhost:3000", "OPTIONS", "GET", 204, true}, {"http://localhost:3000", "OPTIONS", "DELETE", 204, true}} {
 		t.Run(tt.origin+tt.method+tt.requested, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(tt.method, "/api/v1/health", nil)

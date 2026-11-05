@@ -55,11 +55,11 @@ func CORS(origins []string) gin.HandlerFunc {
 		}
 		if c.Request.Method == http.MethodOptions {
 			method := c.GetHeader("Access-Control-Request-Method")
-			if method != "GET" && method != "POST" && method != "PATCH" {
+			if method != "GET" && method != "POST" && method != "PATCH" && method != "DELETE" {
 				handlers.Error(c, 405, "method_not_allowed", "Method is not allowed")
 				return
 			}
-			c.Header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+			c.Header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
 			c.Header("Access-Control-Allow-Headers", "Content-Type")
 			c.AbortWithStatus(204)
 			return
