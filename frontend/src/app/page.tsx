@@ -19,24 +19,25 @@ import { Card } from "@/components/ui";
 import { Connectivity } from "@/components/connectivity";
 import { Dashboard } from "@/components/dashboard";
 import { Scanner } from "@/components/scanner";
+import Link from "next/link";
 const features = [
   {
     icon: BrainCircuit,
     title: "AI-Powered Scam Analysis",
     text: "A future second opinion on messages that don’t feel quite right.",
-    tag: "PLANNED · PHASE 3",
+    tag: "PLANNED · PHASE 4",
   },
   {
     icon: Link2,
     title: "Phishing Link Detection",
-    text: "Understand suspicious URL patterns before you take the next click.",
-    tag: "PLANNED · PHASE 3",
+    text: "Review suspicious URL syntax without opening or fetching the link.",
+    tag: "RULE-BASED · LIVE",
   },
   {
     icon: ChartNoAxesCombined,
     title: "Clear Risk Assessments",
-    text: "Straightforward risk levels with explanations you can understand.",
-    tag: "PLANNED · PHASE 3",
+    text: "See a score, triggered indicators, and safer next steps.",
+    tag: "RULE-BASED · LIVE",
   },
   {
     icon: History,
@@ -72,17 +73,16 @@ export default function Home() {
               share.
             </p>
             <div className="hero-actions">
-              <a className="button" href="#scanner">
+              <Link className="button" href="/scan/message">
                 <MessageSquareText size={18} /> Scan a Message{" "}
                 <ArrowRight size={16} />
-              </a>
-              <a className="button secondary" href="#scanner">
+              </Link>
+              <Link className="button secondary" href="/scan/url">
                 <Link2 size={18} /> Check a Link
-              </a>
+              </Link>
             </div>
             <p className="hero-disclaimer">
-              <LockKeyhole size={13} /> Foundation preview · Live scanning
-              available in Phase 3
+              <LockKeyhole size={13} /> Advisory rule-based scans · Sign in to use
             </p>
           </div>
           <div
@@ -140,9 +140,9 @@ export default function Home() {
                 threats.
               </p>
             </div>
-            <a className="text-link" href="#scanner">
+            <Link className="text-link" href="#scanner">
               Explore the preview <ArrowUpRight size={16} />
-            </a>
+            </Link>
           </div>
           <div className="features-grid">
             {features.map((f) => (
@@ -162,7 +162,7 @@ export default function Home() {
             <div className="center-heading">
               <p className="eyebrow">SIMPLE BY DESIGN</p>
               <h2>From uncertainty to understanding.</h2>
-              <p>The planned scan experience, in four simple steps.</p>
+              <p>From a suspicious message or URL to an explainable assessment.</p>
             </div>
             <div className="steps">
               {[

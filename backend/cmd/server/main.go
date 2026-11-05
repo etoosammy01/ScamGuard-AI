@@ -40,7 +40,7 @@ func run() error {
 		return errors.New("password service initialization failed")
 	}
 	auth := &services.Auth{Store: &repository.Accounts{DB: db}, Passwords: passwords, Lifetime: c.SessionLifetime}
-	s := &http.Server{Addr: ":" + c.Port, Handler: router.New(db, c.Origins, router.AuthOptions{Service: auth, Config: c}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
+	s := &http.Server{Addr: ":" + c.Port, Handler: router.New(db, c.Origins, router.AuthOptions{Service: auth, Config: c, ScanStore: &repository.Scans{DB: db}, ScanService: services.Detection{}}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
 	done := make(chan error, 1)
 	go func() { slog.Info("server listening", "port", c.Port); done <- s.ListenAndServe() }()
 	select {

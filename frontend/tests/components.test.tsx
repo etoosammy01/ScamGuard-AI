@@ -5,11 +5,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Scanner } from "../src/components/scanner";
 import { Dashboard } from "../src/components/dashboard";
 import { ErrorState, LoadingState } from "../src/components/ui";
-test("scanner preview disables submissions and explains privacy", () => {
+test("homepage scanner offers real protected message and URL tools", () => {
   const html = renderToStaticMarkup(<Scanner />);
-  assert.match(html, /disabled=""/);
-  assert.match(html, /no analysis is performed/);
-  assert.match(html, /Phase 3/);
+  assert.match(html, /\/scan\/message/);
+  assert.match(html, /\/scan\/url/);
+  assert.match(html, /false positives or miss threats/);
   assert.doesNotMatch(html, /<form/);
 });
 test("dashboard marks sample results as fictional", () => {

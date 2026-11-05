@@ -11,7 +11,7 @@ export function Footer() {
         <span>
           <ShieldCheck size={15} /> Built with security in mind
         </span>
-        <p>© {new Date().getFullYear()} ScamGuard AI · Foundation preview</p>
+        <p>© {new Date().getFullYear()} ScamGuard AI · Rule-based scanning</p>
       </div>
     </footer>
   );

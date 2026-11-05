@@ -66,3 +66,33 @@ func TestAdminAuthorization(t *testing.T) {
 		}
 	}
 }
+
+func TestUserRateLimit(t *testing.T) {
+	gin.SetMode(gin.ReleaseMode)
+	l := NewUserRateLimiter(2, time.Minute)
+	l.capacity = 1
+	r := gin.New()
+	r.Use(func(c *gin.Context) { c.Set(models.IdentityKey, models.Identity{ID: "user-1"}) }, l.Middleware())
+	r.POST("/scan", func(c *gin.Context) { c.Status(204) })
+	for i, want := range []int{204, 204, 429, 429} {
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest("POST", "/scan", nil))
+		if w.Code != want {
+			t.Fatalf("request %d: wanted %d, got %d", i, want, w.Code)
+		}
+		if want == 429 && w.Header().Get("Retry-After") == "" {
+			t.Fatal("rate limit did not include Retry-After")
+		}
+	}
+	if len(l.entries) != 1 {
+		t.Fatalf("user limiter exceeded configured capacity: %d", len(l.entries))
+	}
+	unauthenticated := gin.New()
+	unauthenticated.Use(l.Middleware())
+	unauthenticated.POST("/scan", func(c *gin.Context) { c.Status(204) })
+	w := httptest.NewRecorder()
+	unauthenticated.ServeHTTP(w, httptest.NewRequest("POST", "/scan", nil))
+	if w.Code != 401 {
+		t.Fatalf("missing identity got %d", w.Code)
+	}
+}

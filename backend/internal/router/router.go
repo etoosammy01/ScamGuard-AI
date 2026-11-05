@@ -7,13 +7,16 @@ import (
 	"github.com/etoosammy01/ScamGuard-AI/backend/internal/config"
 	"github.com/etoosammy01/ScamGuard-AI/backend/internal/handlers"
 	"github.com/etoosammy01/ScamGuard-AI/backend/internal/middleware"
+	"github.com/etoosammy01/ScamGuard-AI/backend/internal/repository"
 	"github.com/etoosammy01/ScamGuard-AI/backend/internal/services"
 	"github.com/gin-gonic/gin"
 )
 
 type AuthOptions struct {
-	Service *services.Auth
-	Config  config.Config
+	ScanStore   *repository.Scans
+	ScanService handlers.ScanService
+	Service     *services.Auth
+	Config      config.Config
 }
 
 func New(db handlers.Pinger, origins []string, options ...AuthOptions) http.Handler {
@@ -34,6 +37,12 @@ func New(db handlers.Pinger, origins []string, options ...AuthOptions) http.Hand
 		protected.GET("/auth/me", auth.Me)
 		protected.GET("/users/me", auth.Me)
 		protected.PATCH("/users/me", auth.UpdateProfile)
+		if option.ScanStore != nil && option.ScanService != nil {
+			scans := &handlers.ScanHandler{Store: option.ScanStore, Service: option.ScanService}
+			limiter := middleware.NewUserRateLimiter(20, time.Hour)
+			protected.POST("/scans/message", limiter.Middleware(), scans.Message)
+			protected.POST("/scans/url", limiter.Middleware(), scans.URL)
+		}
 	}
 	r.NoRoute(func(c *gin.Context) { handlers.Error(c, 404, "not_found", "Resource not found") })
 	timed := http.TimeoutHandler(r, 5*time.Second, `{"error":{"code":"request_timeout","message":"Request timed out"}}`)
