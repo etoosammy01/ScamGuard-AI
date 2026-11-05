@@ -122,3 +122,66 @@ func (l *RateLimiter) Middleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// UserRateLimiter uses a bounded in-process fixed window keyed by the authenticated identity.
+type userRateEntry struct {
+	count int
+	until time.Time
+}
+type UserRateLimiter struct {
+	mu       sync.Mutex
+	entries  map[string]userRateEntry
+	limit    int
+	window   time.Duration
+	now      func() time.Time
+	capacity int
+}
+
+func NewUserRateLimiter(limit int, window time.Duration) *UserRateLimiter {
+	return &UserRateLimiter{entries: map[string]userRateEntry{}, limit: limit, window: window, now: time.Now, capacity: 10000}
+}
+func (l *UserRateLimiter) Middleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		identity, ok := c.Get(models.IdentityKey)
+		if !ok {
+			handlers.Error(c, 401, "unauthenticated", "Sign in to continue")
+			return
+		}
+		user, valid := identity.(models.Identity)
+		if !valid || user.ID == "" {
+			c.Abort()
+			handlers.Error(c, 401, "unauthenticated", "Sign in to continue")
+			return
+		}
+		l.mu.Lock()
+		now := l.now()
+		entry, exists := l.entries[user.ID]
+		if !exists || !now.Before(entry.until) {
+			if len(l.entries) >= l.capacity {
+				for k, v := range l.entries {
+					if !now.Before(v.until) {
+						delete(l.entries, k)
+					}
+				}
+				if len(l.entries) >= l.capacity {
+					l.mu.Unlock()
+					c.Header("Retry-After", strconv.Itoa(int(l.window.Seconds())+1))
+					handlers.Error(c, 429, "rate_limited", "Scan limit reached. Try again later")
+					return
+				}
+			}
+			entry = userRateEntry{until: now.Add(l.window)}
+		}
+		if entry.count >= l.limit {
+			retry := int(entry.until.Sub(now).Seconds()) + 1
+			l.mu.Unlock()
+			c.Header("Retry-After", strconv.Itoa(retry))
+			handlers.Error(c, 429, "rate_limited", "Scan limit reached. Try again later")
+			return
+		}
+		entry.count++
+		l.entries[user.ID] = entry
+		l.mu.Unlock()
+		c.Next()
+	}
+}

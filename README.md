@@ -1,18 +1,21 @@
 # ScamGuard AI
 
-ScamGuard AI is a scam and phishing awareness platform in development. It helps people prepare to assess suspicious messages, emails, and links before they trust, click, or share. Scams exploit urgency and uncertainty; the planned analysis will offer understandable assessments that support informed decisions.
+ScamGuard AI is a scam and phishing awareness platform in development. It helps people assess suspicious messages and links before they trust, click, or share. Its current deterministic rules explain common threat indicators and support safer decisions.
 
-## Current status: Phase 2
+## Current status: Phase 3
 
 Implemented:
 
-- Phase 1 Go/Gin API, PostgreSQL pooling and readiness, responsive landing page, dashboard demo, scanner interface preview, and real API connectivity indicator.
+- Phase 1 Go/Gin API, PostgreSQL pooling and readiness, responsive landing page, clearly labeled dashboard demo, and real API connectivity indicator.
 - Registration with validation and Argon2id password hashing; login with generic failure responses and rate limits.
 - Opaque server-side sessions, HTTP-only cookies, logout/revocation, expiry checks, reusable authentication and separate admin authorization middleware.
 - Protected dashboard and profile pages, refresh-persistent authentication state, editable name/bio, and cross-tab logout notification.
 - Versioned migrations, automated backend/frontend tests, browser authentication smoke tests, and GitHub Actions.
+- Deterministic message and URL risk analysis with scored, explainable indicators, categories, and recommendations; scans require an authenticated session.
+- Real responsive message and URL scanner pages, backed by `/api/v1/scans/message` and `/api/v1/scans/url`.
+- Scan history saves only analysis metadata and triggered indicators. Raw message and URL inputs are not persisted.
 
-**Scanning remains unavailable until Phase 3.** Scanner fields stay in browser memory and are never submitted or saved. The homepage demo is explicitly fictional. The authenticated dashboard shows unavailable placeholders and an empty history, not simulated scan results. AI analysis, phishing detection, external URL fetching, email verification, password reset, and MFA are not implemented.
+**Phase 3 scanning is rule-based and advisory.** It is not an AI classifier and cannot guarantee safety; false positives and false negatives are possible. Dashboard metrics and public dashboard charts remain clearly marked fictional demos; the authenticated dashboard keeps scan-history and analytics placeholders until Phase 5. AI analysis, external URL fetching, email verification, password reset, and MFA are not implemented.
 
 ## Architecture and stack
 
@@ -24,7 +27,7 @@ Browser → Next.js App Router (3000)
 
 Go 1.25+ is the source minimum (`backend/go.mod`); use a maintained Go release, as CI does. Frontend uses Node.js 24 LTS, Next.js 16, React 19, TypeScript, Tailwind CSS 4, and Lucide. Compose and CI use PostgreSQL 17; SQL is compatible with PostgreSQL 16+. Dependencies are locked in `go.sum` and `package-lock.json`.
 
-`cmd/server` owns startup/shutdown; internal packages separate configuration, handlers, middleware, models, services, repositories, and database infrastructure. `cmd/migrate` applies embedded SQL. The frontend retains the Phase 1 components and adds account pages, an authentication context, API client, and route guards. Protected pages are static shells: account information is fetched from the authenticated API and is not embedded in cached HTML. Browser guards provide navigation behavior; the API remains the authorization boundary.
+`cmd/server` owns startup/shutdown; internal packages separate configuration, handlers, middleware, models, services, repositories, database infrastructure, and the deterministic `internal/detection` rule engine. The engine performs syntax-only URL inspection and never opens submitted links or resolves DNS. The frontend retains the Phase 1 components and adds account pages, an authentication context, API client, route guards, and authenticated scanner forms. Protected pages are static shells: account information is fetched from the authenticated API and is not embedded in cached HTML. Browser guards provide navigation behavior; the API remains the authorization boundary.
 
 ## Local setup
 
@@ -53,7 +56,7 @@ go run ./cmd/migrate up
 go run ./cmd/server
 ```
 
-Go does not automatically read `.env`; source it as above. Existing Phase 1 databases only need migration `002`. New databases receive both migrations. The server can expose liveness while PostgreSQL is unavailable; readiness and authentication report database failures safely.
+Go does not automatically read `.env`; source it as above. Existing Phase 1 databases receive migrations `002` and `003`; new databases receive all migrations. The server can expose liveness while PostgreSQL is unavailable; readiness and authenticated scan requests report database failures safely.
 
 In a frontend terminal:
 
@@ -145,6 +148,8 @@ Use separate least-privileged runtime and migration database roles in production
 | `GET /api/v1/auth/me` | Session | 200 `{ "user": ... }` |
 | `GET /api/v1/users/me` | Session | 200 `{ "user": ... }` |
 | `PATCH /api/v1/users/me` | Session + trusted Origin | Optional `full_name` and/or `bio` (500 characters); returns updated user |
+| `POST /api/v1/scans/message` | Session + trusted Origin | JSON `{ "content": "..." }`; returns a stored rule-based assessment |
+| `POST /api/v1/scans/url` | Session + trusted Origin | JSON `{ "url": "https://..." }`; parses URL syntax without fetching or resolving it |
 
 Public user fields: `id`, `full_name`, `email`, `bio`, `role`, `created_at`. Profile identity comes from the session; client-supplied account IDs, email, role, hash, and timestamp changes are rejected. Errors use `{ "error": { "code": "...", "message": "..." } }`. Common statuses: 400 invalid fields/body, 401 invalid credentials/session, 403 Origin/authorization failure, 415 unsupported media type, 429 throttled (with Retry-After), 503 temporarily unavailable. Error responses never include SQL, stack traces, or secret values.
 
@@ -165,6 +170,17 @@ curl -i -X POST -b /tmp/scamguard-local-cookies \
 
 The temporary curl cookie jar contains a live credential. Restrict its permissions and delete it after use; never commit or share it. Avoid putting real passwords into shell history.
 
+Scan example (use synthetic data; do not submit secrets):
+
+```sh
+curl -i -b /tmp/scamguard-local-cookies -H 'Origin: http://localhost:3000' \
+  -H 'Content-Type: application/json' \
+  -d '{"content":"URGENT: Your bank account has been suspended. Verify your password at https://secure-login.invalid/verify"}' \
+  http://localhost:8080/api/v1/scans/message
+```
+
+Successful scan responses use `{ "result": { "scan_id", "scan_type", "risk_score", "risk_level", "category", "indicators", "recommendations", "analysis_mode", "created_at" } }`; error bodies retain the standard `{ "error": { "code", "message" } }` contract. URL scans reject non-HTTP(S) schemes. Both endpoints require the session cookie and trusted Origin; per-user in-process rate limiting allows 20 scans per hour.
+
 ## Migrations
 
 From `backend`, with the environment loaded:
@@ -179,7 +195,50 @@ The runner discovers embedded SQL versions, uses the existing `schema_migrations
 
 - `001_initial`: preserved unchanged; users, scans, original constraints/indexes, update timestamp trigger.
 - `002_authentication`: adds optional bio (default empty), a unique index on `lower(btrim(email))`, and sessions with user foreign key/cascade deletion, unique 32-byte token hash, creation/expiry/revocation timestamps, and user/expiry indexes. Existing users/scans remain intact. Conflicting legacy emails must be resolved before migration; the migration fails atomically rather than silently deleting/merging accounts.
-- Rolling back `002` invalidates all sessions and removes bio values and the additional normalized-email index, while retaining Phase 1 users/scans. A second `down` removes the initial schema and is destructive.
+- `003_private_scans`: removes legacy raw `input_text` and free-text `explanation` from existing scan rows, preserving IDs, ownership, timestamps, and score; adds constrained category and JSONB indicators; restricts scan types to supported types and reclassifies old risk levels to the Phase 3 score bands. It never copies raw old input into a new field. Rollback restores schema shape with a fixed redaction marker and empty explanation; deleted content cannot be recovered.
+- Rolling back `002` invalidates all sessions and removes bio values and the additional normalized-email index, while retaining Phase 1 users/scans. Rolling back `001` removes the initial schema and is destructive.
+
+## Detection engine
+
+The deterministic rules run locally in Go and require no AI key, paid API, DNS lookup, or outbound request. Message checks combine context: urgency alone adds only a small signal and is not a scam verdict. Rules examine credential requests, account threats/impersonation, organization links, suspicious embedded URL structure, fee-backed prizes, advance fees, investment promises, job fees, delivery links, and requests to move to another channel. URLs are parsed with Go's URL parser, normalized using IDNA, and compared against the public suffix list to identify the registrable domain. Checks include userinfo, numeric hosts, punycode, subdomain depth, familiar-brand terms outside the brand's registered domain, known shorteners, unusual ports, obfuscated delimiters, and length. A shortener, HTTPS, long path, or IP address alone is not a malicious verdict.
+
+Each rule has a stable rule ID, category, explanation, and weight. Initial, code-configurable weights are kept beside the rules in `backend/internal/detection/message.go` and `url.go`:
+
+| Message rule | Weight |
+| --- | ---: |
+| `credential_request` | 35 |
+| `urgent_impersonation` | 25 |
+| `account_threat` | 12 |
+| `organization_link` | 20 |
+| `suspicious_embedded_link` | 15 |
+| `prize_fee` | 35 |
+| `advance_fee` | 30 |
+| `investment_payment` / `financial_promise` | 30 / 18 |
+| `off_channel_migration` | 15 |
+| `job_upfront_fee` | 25 |
+| `delivery_link` | 20 |
+| `urgency_only` | 3 |
+
+| URL rule | Weight |
+| --- | ---: |
+| `url_userinfo` | 30 |
+| `ip_literal_host` | 18 |
+| `punycode_hostname` | 12 |
+| `deep_subdomains` | 15 |
+| `brand_domain_mimic` / `brand_in_subdomain` | 25 / 28 |
+| `url_shortener` | 10 |
+| `long_url` / `long_hostname` | 8 / 10 |
+| `nonstandard_port` / `encoded_components` | 12 / 12 |
+
+Related signals share a correlation group; only the strongest finding per group contributes, then contributions are summed and capped at 100. Bands are 0–24 low, 25–49 moderate, 50–74 high, and 75–100 critical. Structural warnings such as an IP literal, punycode, a shortener, or URL length do not alone assign a scam category. Output includes supported categories from triggered rules; the primary category is chosen deterministically by explicit severity priority. Recommendations derive only from triggered categories and indicators. The result is an advisory heuristic, never a guarantee of safety.
+
+Supported provisional categories: phishing, bank impersonation, credential theft, fake prize, advance fee, investment scam, job scam, delivery scam, account takeover, general social engineering, and unknown. A category is returned only when a rule supports it; otherwise the result is `unknown`.
+
+Limits: language matching is English-oriented and cannot infer intent or verify sender identity. Novel scams and benign brand mentions can be missed or flagged. The known-shortener list is static. IDN/punycode is a warning, not a proof of maliciousness. Only the first detected category appears as the primary `category`; the UI shows its triggered indicators. No external URL fetch, redirect inspection, DNS/IP reputation, attachment analysis, email header analysis, or AI model is implemented. Phase 4 may add AI as a second opinion while keeping rules explainable, deterministic, and independent.
+
+Privacy: scanner request bodies are size-limited and excluded from logs. Submitted content is used in memory for analysis only; scan persistence writes owner, type, score, level, category, indicators, and timestamp. It does not store original messages, URLs, passwords, or embedded URLs. Result indicators can still reveal some context, so retain them only as long as needed; future phases should add configurable retention, deletion/export controls, and clear consent before accepting sensitive material. Do not paste passwords, OTPs, payment details, or confidential content.
+
+URL scanning currently never performs network access. Before any later fetch feature, implement SSRF controls at both application and network layers: deny local/private/link-local/reserved IPv4 and IPv6, inspect and pin validated resolved addresses to prevent rebinding, validate every redirect and final connection, restrict egress, reject credentials and unsafe ports, and enforce response, redirect, and time limits in an isolated worker. Never forward cookies or authorization headers.
 
 ## Testing and verification
 
@@ -207,7 +266,7 @@ npm run build
 npm start
 ```
 
-Type checking generates Next.js route types first, so it works on fresh clones. Unit/component tests cover form validation, login error handling, credentialed logout requests, session loading, redirect decisions, and the existing demo/scanner safeguards. The scoped minimatch override addresses development-tooling advisories; remove it when upstream dependency ranges catch up. Some Next.js plugins still emit ESLint 10 peer-range warnings, but clean installation and lint are validated with the lockfile.
+Type checking generates Next.js route types first, so it works on fresh clones. Unit/component tests cover form validation, login error handling, credentialed logout requests, session loading, redirect decisions, scan API requests and response validation, and the clearly marked public demo. The scanner API tests do not replace the authenticated Chrome scan flow in CI. The scoped minimatch override addresses development-tooling advisories; remove it when upstream dependency ranges catch up. Some Next.js plugins still emit ESLint 10 peer-range warnings, but clean installation and lint are validated with the lockfile.
 
 For the browser flow, start the API and production frontend against a disposable database, then launch a separate Chrome profile:
 
@@ -218,7 +277,7 @@ google-chrome --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
 npm run test:browser
 ```
 
-The Chrome profile/debug port are for automated local/CI testing only; keep them loopback-bound and stop Chrome afterward. The browser test uses Node's built-in WebSocket client, creates a unique synthetic account, and tests registration validation, login errors, dashboard authentication, cookie flags, refresh persistence, guest redirects, responsive layout, persisted profile edits, logout/token revocation, and invalidated-session redirects. Configure `SMOKE_APP_URL`, `SMOKE_API_URL`, or `CHROME_DEBUG_URL` if needed. Synthetic test accounts remain in the disposable database until it is discarded.
+The Chrome profile/debug port are for automated local/CI testing only; keep them loopback-bound and stop Chrome afterward. The browser test uses Node's built-in WebSocket client, creates a unique synthetic account, and tests registration validation, login errors, dashboard authentication, cookie flags, refresh persistence, guest redirects, authenticated message and URL scan results, responsive layout, persisted profile edits, logout/token revocation, and invalidated-session redirects. Configure `SMOKE_APP_URL`, `SMOKE_API_URL`, or `CHROME_DEBUG_URL` if needed. Synthetic test accounts and scan metadata remain in the disposable database until it is discarded.
 
 CI runs Go tests with PostgreSQL 17, migration up/up/down/up, race detection, vet, backend build, frontend lint/types/tests/build, and the real Chrome authentication flow. It does not deploy or merge changes.
 
@@ -228,13 +287,13 @@ Request logs contain method, registered route, status, and timing; they exclude 
 
 Names, emails, bios, password hashes, and session metadata are now stored. Treat them as personal data: protect database/backups, limit access, document retention/deletion, and avoid sensitive bios. Password reset, email verification, MFA, account deletion/export, distributed throttling, and session-list/revoke-all UX are future work, not hidden capabilities.
 
-Before accepting real scan submissions in Phase 3, implement data minimization, redaction, explicit consent where appropriate, encryption/access controls, configurable retention, and deletion/export. Scan text may contain confidential or financial information. Phase 1's `ON DELETE SET NULL` only removes a scan's user link; it does not scrub the text. No real scan inputs are stored by Phase 2.
+Phase 3 avoids saving raw scan input, but users may still submit confidential information. Scan records retain account linkage and triggered indicators. Protect backups and restrict database access, establish a retention period, and add deletion/export controls before broad production use. Phase 1's `ON DELETE SET NULL` only removes the scan's user link; it does not remove result metadata. The Phase 3 migration deletes legacy raw inputs from existing rows.
 
 Before external URL fetching, implement SSRF protection: HTTP(S) only; reject credentials/unexpected ports; block loopback/private/link-local/reserved IPv4/IPv6 destinations; defend against DNS rebinding; validate each redirect and the actual connection address; restrict outbound networking; isolate workers; never forward credentials; enforce timeout, response-size, and redirect limits. Fetched content is untrusted. Future AI assessments will be advisory and cannot guarantee safety.
 
 ## Roadmap and contributions
 
-Phase 1 foundation is merged. Phase 2 implements account/session/profile management and must be reviewed before merging. Phase 3 scanning, AI integration, and phishing classification remain blocked on Phase 2 review and the privacy/SSRF safeguards above.
+Phase 1 and Phase 2 foundations are merged. Phase 3 provides a deterministic, explainable detection engine and authenticated scanners; review this phase before merging. Phase 4 may add an AI second opinion. Phase 5 may add scan history and analytics. AI analysis, advanced phishing classification, and external URL fetching are not part of Phase 3.
 
 Branch from current `main`, use focused commits, run the checks above, and document behavior, tests, and limitations in a pull request. Never commit real credentials, environment files, browser profiles, or user data. Do not merge automatically.
 

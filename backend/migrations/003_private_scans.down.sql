@@ -1,0 +1,12 @@
+ALTER TABLE scans DROP CONSTRAINT scans_risk_consistency;
+ALTER TABLE scans DROP CONSTRAINT scans_risk_level_check;
+UPDATE scans SET risk_level = CASE WHEN risk_score < 30 THEN 'low' WHEN risk_score < 70 THEN 'medium' ELSE 'high' END;
+ALTER TABLE scans ADD CONSTRAINT scans_risk_level_check CHECK (risk_level IN ('low','medium','high'));
+ALTER TABLE scans ADD CONSTRAINT scans_risk_consistency CHECK ((risk_score < 30 AND risk_level='low') OR (risk_score BETWEEN 30 AND 69 AND risk_level='medium') OR (risk_score >= 70 AND risk_level='high'));
+ALTER TABLE scans DROP CONSTRAINT scans_scan_type_check;
+ALTER TABLE scans ADD CONSTRAINT scans_scan_type_check CHECK (scan_type IN ('message','url','email'));
+ALTER TABLE scans DROP CONSTRAINT scans_category_valid;
+ALTER TABLE scans DROP COLUMN indicators;
+ALTER TABLE scans DROP COLUMN category;
+ALTER TABLE scans ADD COLUMN input_text text NOT NULL DEFAULT '[removed by Phase 3 privacy migration]';
+ALTER TABLE scans ADD COLUMN explanation text NOT NULL DEFAULT '';

@@ -28,20 +28,20 @@ func TestSchemaIntegration(t *testing.T) {
 	if err = tx.QueryRow(ctx, "INSERT INTO users(full_name,email,password_hash) VALUES($1,$2,$3) RETURNING id", "Test User", "schema-test@example.invalid", "test-fixture-not-a-password").Scan(&id); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = tx.Exec(ctx, "INSERT INTO scans(user_id,scan_type,input_text,risk_score,risk_level,explanation) VALUES($1,$2,$3,$4,$5,$6)", id, "message", "synthetic test input", 90, "high", "test fixture"); err != nil {
+	if _, err = tx.Exec(ctx, "INSERT INTO scans(user_id,scan_type,risk_score,risk_level,category,indicators) VALUES($1,$2,$3,$4,$5,'[]'::jsonb)", id, "message", 90, "critical", "phishing"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = tx.Exec(ctx, "DELETE FROM users WHERE id=$1", id); err != nil {
 		t.Fatal(err)
 	}
 	var orphan bool
-	if err = tx.QueryRow(ctx, "SELECT user_id IS NULL FROM scans WHERE input_text=$1", "synthetic test input").Scan(&orphan); err != nil || !orphan {
+	if err = tx.QueryRow(ctx, "SELECT user_id IS NULL FROM scans WHERE user_id IS NULL").Scan(&orphan); err != nil || !orphan {
 		t.Fatalf("foreign key: %v %v", orphan, err)
 	}
 	// A savepoint isolates the expected constraint failure from other checks.
 	for _, sql := range []string{
-		"INSERT INTO scans(scan_type,input_text,risk_score,risk_level,explanation) VALUES('message','synthetic',101,'high','test')",
-		"INSERT INTO scans(scan_type,input_text,risk_score,risk_level,explanation) VALUES('message','synthetic',10,'high','test')",
+		"INSERT INTO scans(scan_type,risk_score,risk_level,category,indicators) VALUES('message',101,'critical','unknown','[]'::jsonb)",
+		"INSERT INTO scans(scan_type,risk_score,risk_level,category,indicators) VALUES('message',10,'high','unknown','[]'::jsonb)",
 		"INSERT INTO users(full_name,email,password_hash,role) VALUES('Test','invalid@example.invalid','fixture','superuser')",
 	} {
 		if _, err = tx.Exec(ctx, "SAVEPOINT constraint_check"); err != nil {

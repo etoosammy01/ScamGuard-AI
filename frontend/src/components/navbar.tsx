@@ -20,8 +20,8 @@ export function Navbar() {
           <a href="#how-it-works">How it works</a>
           <Link href="/dashboard">Dashboard</Link>
         </div>
-        <Link className="button small" href="/login">
-          Sign in <ArrowUpRight size={15} />
+        <Link className="button small" href="/scan/message">
+          Scan a message <ArrowUpRight size={15} />
         </Link>
       </nav>
     </header>

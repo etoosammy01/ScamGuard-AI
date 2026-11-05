@@ -37,7 +37,7 @@ export function UserDashboard() {
               <item.icon className="blue" size={18} />
             </div>
             <strong aria-label="Not available">—</strong>
-            <span>Available when scanning launches in Phase 3</span>
+            <span>Not yet available · history and analytics in Phase 5</span>
           </Card>
         ))}
       </div>
@@ -51,11 +51,10 @@ export function UserDashboard() {
             <ScanLine size={34} />
             <h3>Your scan history will start here.</h3>
             <p>
-              No scans have been performed. Live scanning and saved history are
-              not available yet.
+              Saved scan history and analytics will arrive in Phase 5.
             </p>
-            <Link href="/#scanner" className="text-link">
-              Explore the scanner preview
+            <Link href="/scan/message" className="text-link">
+              Scan a suspicious message
             </Link>
           </div>
         </Card>
@@ -78,18 +77,18 @@ export function UserDashboard() {
         </Card>
       </div>
       <div className="quick-scan-grid">
-        <Link href="/#scanner" className="card quick-scan">
+        <Link href="/scan/message" className="card quick-scan">
           <MessageSquareText size={24} />
           <div>
-            <h3>Message scanner preview</h3>
-            <p>Get familiar with the interface · Phase 3</p>
+            <h3>Scan a suspicious message</h3>
+            <p>Rule-based assessment · sign-in required</p>
           </div>
         </Link>
-        <Link href="/#scanner" className="card quick-scan">
+        <Link href="/scan/url" className="card quick-scan">
           <Link2 size={24} />
           <div>
-            <h3>URL scanner preview</h3>
-            <p>See the planned link-checking flow · Phase 3</p>
+            <h3>Check a suspicious URL</h3>
+            <p>Analyze URL structure without fetching the link</p>
           </div>
         </Link>
       </div>

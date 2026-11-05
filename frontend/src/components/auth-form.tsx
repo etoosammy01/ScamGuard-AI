@@ -196,7 +196,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           <LockKeyhole size={13} /> Your session stays in a secure, HTTP-only
           cookie.
         </p>
-        <p className="auth-footnote">Scanning becomes available in Phase 3.</p>
+        <p className="auth-footnote">Scanning uses advisory rules and can miss threats or flag benign content.</p>
       </main>
     </AuthGuard>
   );

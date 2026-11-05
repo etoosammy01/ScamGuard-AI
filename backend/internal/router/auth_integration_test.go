@@ -75,7 +75,7 @@ func TestAuthenticationIntegration(t *testing.T) {
 	service := &services.Auth{Store: &repository.Accounts{DB: pool}, Passwords: passwords, Lifetime: 12 * time.Hour}
 	configuration := config.Config{SessionLifetime: 12 * time.Hour}
 	newApp := func() http.Handler {
-		return router.New(pool, []string{origin}, router.AuthOptions{Service: service, Config: configuration})
+		return router.New(pool, []string{origin}, router.AuthOptions{Service: service, Config: configuration, ScanStore: &repository.Scans{DB: pool}, ScanService: services.Detection{}})
 	}
 	app := newApp()
 	request := func(handler http.Handler, method, path, body, requestOrigin string, cookie *http.Cookie) *httptest.ResponseRecorder {
@@ -211,6 +211,34 @@ func TestAuthenticationIntegration(t *testing.T) {
 		var role string
 		if err := pool.QueryRow(ctx, "SELECT role FROM users WHERE id=$1", user.ID).Scan(&role); err != nil || role != "user" {
 			t.Fatal("role escalated")
+		}
+	})
+	t.Run("scan endpoints authenticate, verify origin, persist only owner's results, and rate limit", func(t *testing.T) {
+		const path = "/api/v1/scans/message"
+		body := `{"content":"URGENT: Your bank account has been suspended. Verify your password at https://secure-login.invalid/verify"}`
+		requireCode(request(app, "POST", path, body, origin, nil), 401)
+		requireCode(request(app, "POST", path, body, "https://evil.example", cookie), 403)
+		created := request(app, "POST", path, body, origin, cookie)
+		requireCode(created, 201)
+		if !strings.Contains(created.Body.String(), `"analysis_mode":"rules"`) || !strings.Contains(created.Body.String(), `"risk_level":"critical"`) {
+			t.Fatalf("unexpected scan result: %s", created.Body.String())
+		}
+		var ownerCount int
+		if err := pool.QueryRow(ctx, "SELECT count(*) FROM scans WHERE user_id=$1", user.ID).Scan(&ownerCount); err != nil || ownerCount != 1 {
+			t.Fatal("scan result was not stored for authenticated owner", ownerCount, err)
+		}
+		urlScan := request(app, "POST", "/api/v1/scans/url", `{"url":"https://paypal-example.com/login"}`, origin, cookie)
+		requireCode(urlScan, 201)
+		if !strings.Contains(urlScan.Body.String(), `"rule_id":"brand_domain_mimic"`) {
+			t.Fatalf("URL rule was not returned: %s", urlScan.Body.String())
+		}
+		for i := 0; i < 20; i++ {
+			status := request(app, "POST", path, `{"content":"A routine message."}`, origin, cookie)
+			want := 201
+			if i >= 18 {
+				want = 429
+			}
+			requireCode(status, want)
 		}
 	})
 	t.Run("fresh login rotates current session", func(t *testing.T) {

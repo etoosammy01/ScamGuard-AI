@@ -64,7 +64,8 @@ async function waitFor(expression, label) {
     }
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
-  throw new Error(`Timed out: ${label}`);
+  const state = await evaluate(`({path:location.pathname, text:document.body.innerText.slice(0,1200)})`).catch(() => null);
+  throw new Error(`Timed out: ${label}; state=${JSON.stringify(state)}`);
 }
 async function navigate(path) {
   await call("Page.navigate", { url: `${app}${path}` });
@@ -76,6 +77,9 @@ async function fill(values) {
 }
 async function submit() {
   await evaluate('document.querySelector("form").requestSubmit()');
+}
+async function fillScanner(value) {
+  await evaluate(`(() => { const field=document.querySelector('#scan-input'); const prototype=field.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(prototype,'value').set.call(field,${JSON.stringify(value)}); field.dispatchEvent(new Event('input',{bubbles:true})); })()`);
 }
 const email = `browser-${randomUUID()}@example.invalid`,
   password = "Synthetic secure passphrase 2026";
@@ -139,11 +143,19 @@ try {
     `location.pathname==='/dashboard' && document.body.innerText.includes('Welcome, Browser Test User.')`,
     "authenticated dashboard",
   );
-  assert(
-    await evaluate(
-      `document.body.innerText.includes('No scans have been performed')`,
-    ),
-  );
+  await navigate("/scan/message");
+  await waitFor(`!!document.querySelector('#scan-input')`, "message scanner");
+  await fillScanner("URGENT: Your bank account has been suspended. Verify your password at https://secure-login.invalid/verify");
+  await submit();
+  await waitFor(`document.body.innerText.includes('Risk assessment') && document.body.innerText.includes('Deterministic Rules') && document.body.innerText.includes('Indicators')`, "message scan result and indicators");
+  await navigate("/scan/url");
+  await waitFor(`!!document.querySelector('#scan-input')`, "URL scanner");
+  await fillScanner("https://paypal-example.com/login");
+  await submit();
+  await waitFor(`document.body.innerText.includes('Risk assessment') && document.body.innerText.includes('Deterministic Rules')`, "URL scan result");
+  console.log("Authenticated message and URL scans returned real rule-based results");
+  await navigate("/dashboard");
+  await waitFor(`document.body.innerText.includes('history and analytics in Phase 5')`, "Phase 5 history placeholder");
   const { cookies } = await call("Storage.getCookies");
   const session = cookies.find(
     (cookie) =>
@@ -240,7 +252,7 @@ try {
   );
   assert(
     mutations.every((url) =>
-      /\/api\/v1\/(auth\/(login|register|logout)|users\/me)$/.test(url),
+      /\/api\/v1\/(auth\/(login|register|logout)|users\/me|scans\/(message|url))$/.test(url),
     ),
     "no scanner submission or unexpected mutation",
   );
