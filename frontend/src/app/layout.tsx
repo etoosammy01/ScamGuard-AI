@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/components/auth-provider";
 export const metadata: Metadata = {
   title: "ScamGuard AI — Stay one step ahead",
   description:
@@ -14,7 +15,7 @@ export default function RootLayout({
         <a className="skip-link" href="#main">
           Skip to content
         </a>
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
