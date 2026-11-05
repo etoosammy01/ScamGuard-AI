@@ -11,14 +11,18 @@ import (
 
 type Config struct {
 	Environment, Port, DatabaseURL string
+	OpenAIAPIKey, OpenAIModel      string
 	Origins                        []string
 	SessionLifetime                time.Duration
+	AITimeout                      time.Duration
+	AIMaxOutputTokens              int
+	AIEnabled                      bool
 	SecureCookies                  bool
 }
 
 func Load() (Config, error) { return Parse(os.Getenv) }
 func Parse(get func(string) string) (Config, error) {
-	c := Config{Environment: get("APP_ENV"), Port: get("PORT"), DatabaseURL: get("DATABASE_URL")}
+	c := Config{Environment: get("APP_ENV"), Port: get("PORT"), DatabaseURL: get("DATABASE_URL"), OpenAIAPIKey: strings.TrimSpace(get("OPENAI_API_KEY")), OpenAIModel: strings.TrimSpace(get("OPENAI_MODEL"))}
 	if c.Environment == "" {
 		c.Environment = "development"
 	}
@@ -58,6 +62,36 @@ func Parse(get func(string) string) (Config, error) {
 		}
 	}
 	c.SessionLifetime = time.Duration(hours) * time.Hour
+	aiEnabled := strings.ToLower(strings.TrimSpace(get("AI_ENABLED")))
+	if aiEnabled == "" {
+		aiEnabled = "false"
+	}
+	if aiEnabled != "true" && aiEnabled != "false" {
+		return c, fmt.Errorf("invalid AI_ENABLED")
+	}
+	c.AIEnabled = aiEnabled == "true"
+	timeoutSeconds := 15
+	if raw := get("AI_TIMEOUT_SECONDS"); raw != "" {
+		timeoutSeconds, e = strconv.Atoi(raw)
+		if e != nil || timeoutSeconds < 1 || timeoutSeconds > 30 {
+			return c, fmt.Errorf("invalid AI_TIMEOUT_SECONDS (1-30)")
+		}
+	}
+	c.AITimeout = time.Duration(timeoutSeconds) * time.Second
+	maxTokens := 700
+	if raw := get("AI_MAX_OUTPUT_TOKENS"); raw != "" {
+		maxTokens, e = strconv.Atoi(raw)
+		if e != nil || maxTokens < 100 || maxTokens > 2000 {
+			return c, fmt.Errorf("invalid AI_MAX_OUTPUT_TOKENS (100-2000)")
+		}
+	}
+	c.AIMaxOutputTokens = maxTokens
+	if c.AIEnabled && c.OpenAIAPIKey == "" {
+		return c, fmt.Errorf("OPENAI_API_KEY is required when AI_ENABLED=true")
+	}
+	if c.AIEnabled && c.OpenAIModel == "" {
+		return c, fmt.Errorf("OPENAI_MODEL is required when AI_ENABLED=true")
+	}
 	c.SecureCookies = c.Environment == "production"
 	return c, nil
 }

@@ -24,10 +24,10 @@ func (s *testScanStore) Create(_ context.Context, owner string, result models.Sc
 
 type testScanService struct{}
 
-func (testScanService) Message(string) models.ScanResult {
+func (testScanService) AnalyzeMessage(_ context.Context, _, _ string, _ string) models.ScanResult {
 	return models.ScanResult{ScanType: "message", RiskLevel: "low"}
 }
-func (testScanService) URL(v string) (models.ScanResult, error) {
+func (testScanService) AnalyzeURL(_ context.Context, _, v string, _ string) (models.ScanResult, error) {
 	if v == "bad" {
 		return models.ScanResult{}, errors.New("invalid")
 	}

@@ -2,7 +2,7 @@
 
 ScamGuard AI is a scam and phishing awareness platform in development. It helps people assess suspicious messages and links before they trust, click, or share. Its current deterministic rules explain common threat indicators and support safer decisions.
 
-## Current status: Phase 3
+## Current status: Phase 4
 
 Implemented:
 
@@ -14,8 +14,9 @@ Implemented:
 - Deterministic message and URL risk analysis with scored, explainable indicators, categories, and recommendations; scans require an authenticated session.
 - Real responsive message and URL scanner pages, backed by `/api/v1/scans/message` and `/api/v1/scans/url`.
 - Scan history saves only analysis metadata and triggered indicators. Raw message and URL inputs are not persisted.
+- Optional OpenAI structured analysis, enabled only when requested per scan and configured by backend environment variables. Deterministic rules remain available without an AI key.
 
-**Phase 3 scanning is rule-based and advisory.** It is not an AI classifier and cannot guarantee safety; false positives and false negatives are possible. Dashboard metrics and public dashboard charts remain clearly marked fictional demos; the authenticated dashboard keeps scan-history and analytics placeholders until Phase 5. AI analysis, external URL fetching, email verification, password reset, and MFA are not implemented.
+**Scanning is advisory and cannot guarantee safety; false positives and false negatives are possible.** AI output is an uncalibrated qualitative aid, not a statistically validated probability. Dashboard metrics remain clearly marked fictional demos; scan-history and analytics UI are reserved for Phase 5. External URL fetching, email verification, password reset, and MFA are not implemented.
 
 ## Architecture and stack
 
@@ -89,6 +90,11 @@ The homepage connectivity indicator checks API liveness every 30 seconds, not da
 | `DATABASE_URL` | Required PostgreSQL connection URL; never logged |
 | `CORS_ALLOWED_ORIGINS` | Required comma-separated exact frontend origins, with no trailing slash/path or wildcards |
 | `SESSION_TTL_HOURS` | Absolute session lifetime, 1–24 hours; defaults to 12; no sliding renewal |
+| `AI_ENABLED` | Backend AI feature switch; defaults to `false`; false needs no OpenAI key |
+| `OPENAI_API_KEY` | Backend-only OpenAI API credential; required only when AI is enabled; never expose as `NEXT_PUBLIC_*` |
+| `OPENAI_MODEL` | Explicit model identifier supported by your API account; required only when AI is enabled |
+| `AI_TIMEOUT_SECONDS` | Provider request deadline, 1–30 seconds; defaults to 15 |
+| `AI_MAX_OUTPUT_TOKENS` | Structured response output cap, 100–2,000; defaults to 700 |
 | `NEXT_PUBLIC_API_URL` | Browser-visible API base URL; local value `http://localhost:8080` |
 | `POSTGRES_PASSWORD` | Required by local Compose; must match `DATABASE_URL` |
 | `TEST_DATABASE_URL` | Enables PostgreSQL-backed Go tests against a migrated, disposable test database |
@@ -148,8 +154,10 @@ Use separate least-privileged runtime and migration database roles in production
 | `GET /api/v1/auth/me` | Session | 200 `{ "user": ... }` |
 | `GET /api/v1/users/me` | Session | 200 `{ "user": ... }` |
 | `PATCH /api/v1/users/me` | Session + trusted Origin | Optional `full_name` and/or `bio` (500 characters); returns updated user |
-| `POST /api/v1/scans/message` | Session + trusted Origin | JSON `{ "content": "..." }`; returns a stored rule-based assessment |
-| `POST /api/v1/scans/url` | Session + trusted Origin | JSON `{ "url": "https://..." }`; parses URL syntax without fetching or resolving it |
+| `POST /api/v1/scans/message` | Session + trusted Origin | JSON `{ "content": "...", "analysis_mode": "rules" }`; rules by default, optional hybrid analysis |
+| `POST /api/v1/scans/url` | Session + trusted Origin | JSON `{ "url": "https://...", "analysis_mode": "rules" }`; optional hybrid analysis, no fetching or DNS lookup |
+
+Scan requests may include `"analysis_mode":"hybrid"` to opt into external AI processing. Omission or `"rules"` preserves rules-only behavior. Hybrid mode retains the same response envelope and adds `analysis_mode`, `ai_status`, `rule_score`, `final_score`, and (only on successful AI completion) `ai_assessment`. `ai_status` is `not_requested`, `disabled`, `completed`, `unavailable`, `validation_failed`, or `rate_limited`; fallbacks are never presented as AI completion. Each user may request at most five hybrid analyses per hour per process. AI requests use OpenAI's Responses API structured JSON output with `store:false`, no tools, no URL fetching, and backend-only credentials. Select an `OPENAI_MODEL` your account supports; for example, OpenAI documents `gpt-4o-mini` as supporting Structured Outputs, but availability and access depend on the account. See the [Structured Outputs documentation](https://developers.openai.com/api/docs/guides/structured-outputs).
 
 Public user fields: `id`, `full_name`, `email`, `bio`, `role`, `created_at`. Profile identity comes from the session; client-supplied account IDs, email, role, hash, and timestamp changes are rejected. Errors use `{ "error": { "code": "...", "message": "..." } }`. Common statuses: 400 invalid fields/body, 401 invalid credentials/session, 403 Origin/authorization failure, 415 unsupported media type, 429 throttled (with Retry-After), 503 temporarily unavailable. Error responses never include SQL, stack traces, or secret values.
 
@@ -179,7 +187,7 @@ curl -i -b /tmp/scamguard-local-cookies -H 'Origin: http://localhost:3000' \
   http://localhost:8080/api/v1/scans/message
 ```
 
-Successful scan responses use `{ "result": { "scan_id", "scan_type", "risk_score", "risk_level", "category", "indicators", "recommendations", "analysis_mode", "created_at" } }`; error bodies retain the standard `{ "error": { "code", "message" } }` contract. URL scans reject non-HTTP(S) schemes. Both endpoints require the session cookie and trusted Origin; per-user in-process rate limiting allows 20 scans per hour.
+Successful scan responses use `{ "result": { "scan_id", "scan_type", "risk_score", "risk_level", "category", "indicators", "recommendations", "analysis_mode", "ai_status", "rule_score", "final_score", "ai_assessment", "created_at" } }`; error bodies retain the standard `{ "error": { "code", "message" } }` contract. URL scans reject non-HTTP(S) schemes and are never fetched or DNS-resolved. Both endpoints require the session cookie and trusted Origin; per-user in-process rate limiting allows 20 scans per hour, with a separate five hybrid requests per hour. Successful DB rows retain score/category/indicators and mode/status, never raw scan content or AI prose.
 
 ## Migrations
 
@@ -196,6 +204,7 @@ The runner discovers embedded SQL versions, uses the existing `schema_migrations
 - `001_initial`: preserved unchanged; users, scans, original constraints/indexes, update timestamp trigger.
 - `002_authentication`: adds optional bio (default empty), a unique index on `lower(btrim(email))`, and sessions with user foreign key/cascade deletion, unique 32-byte token hash, creation/expiry/revocation timestamps, and user/expiry indexes. Existing users/scans remain intact. Conflicting legacy emails must be resolved before migration; the migration fails atomically rather than silently deleting/merging accounts.
 - `003_private_scans`: removes legacy raw `input_text` and free-text `explanation` from existing scan rows, preserving IDs, ownership, timestamps, and score; adds constrained category and JSONB indicators; restricts scan types to supported types and reclassifies old risk levels to the Phase 3 score bands. It never copies raw old input into a new field. Rollback restores schema shape with a fixed redaction marker and empty explanation; deleted content cannot be recovered.
+- `004_ai_analysis`: adds constrained `analysis_mode`, `ai_status`, and `rule_score` metadata, extends categories for Phase 4 classifications, and preserves existing rows. AI explanations and prose recommendations are response-only and are not persisted.
 - Rolling back `002` invalidates all sessions and removes bio values and the additional normalized-email index, while retaining Phase 1 users/scans. Rolling back `001` removes the initial schema and is destructive.
 
 ## Detection engine
@@ -234,11 +243,23 @@ Related signals share a correlation group; only the strongest finding per group 
 
 Supported provisional categories: phishing, bank impersonation, credential theft, fake prize, advance fee, investment scam, job scam, delivery scam, account takeover, general social engineering, and unknown. A category is returned only when a rule supports it; otherwise the result is `unknown`.
 
-Limits: language matching is English-oriented and cannot infer intent or verify sender identity. Novel scams and benign brand mentions can be missed or flagged. The known-shortener list is static. IDN/punycode is a warning, not a proof of maliciousness. Only the first detected category appears as the primary `category`; the UI shows its triggered indicators. No external URL fetch, redirect inspection, DNS/IP reputation, attachment analysis, email header analysis, or AI model is implemented. Phase 4 may add AI as a second opinion while keeping rules explainable, deterministic, and independent.
+Rules-only limits: language matching is English-oriented and cannot infer intent or verify sender identity. Novel scams and benign brand mentions can be missed or flagged. The known-shortener list is static. IDN/punycode is a warning, not a proof of maliciousness. Only the first detected category appears as the primary `category`; the UI shows its triggered indicators. No external URL fetch, redirect inspection, DNS/IP reputation, attachment analysis, or email header analysis is implemented.
 
 Privacy: scanner request bodies are size-limited and excluded from logs. Submitted content is used in memory for analysis only; scan persistence writes owner, type, score, level, category, indicators, and timestamp. It does not store original messages, URLs, passwords, or embedded URLs. Result indicators can still reveal some context, so retain them only as long as needed; future phases should add configurable retention, deletion/export controls, and clear consent before accepting sensitive material. Do not paste passwords, OTPs, payment details, or confidential content.
 
 URL scanning currently never performs network access. Before any later fetch feature, implement SSRF controls at both application and network layers: deny local/private/link-local/reserved IPv4 and IPv6, inspect and pin validated resolved addresses to prevent rebinding, validate every redirect and final connection, restrict egress, reject credentials and unsafe ports, and enforce response, redirect, and time limits in an isolated worker. Never forward cookies or authorization headers.
+
+### Optional hybrid AI analysis (Phase 4)
+
+Hybrid mode is opt-in per scan and requires `AI_ENABLED=true`, a backend-only `OPENAI_API_KEY`, and an explicit `OPENAI_MODEL` that the account can use. The backend uses OpenAI's Responses API with strict JSON Schema output, `store:false`, separate trusted instructions and JSON-quoted scan data, and no tools. The submitted text is treated as hostile evidence—even instructions such as “ignore previous instructions” are analyzed as words. URLs are never fetched or supplied as browsing tasks. Requests are bounded by input, output-token, provider-timeout, and per-user usage limits. One retry is allowed only for network errors and selected transient 5xx/408 statuses; invalid requests, 429 quota/rate responses, malformed output, and exhausted attempts do not loop.
+
+Before provider transmission, common password/OTP/token assignments, bearer/JWT credentials, email addresses, phone numbers, account/card/SSN-like identifiers, and URL secret parameters are redacted. This pattern-based pass is not complete DLP; do not submit sensitive data. The scanner discloses external AI processing before opt-in. Provider credentials, full request bodies, and scanned text are never logged. Operational counters track request/success/failure/fallback counts, aggregate latency, and provider token usage without content. AI assessment prose and AI indicators are returned to the requester but not stored; only the existing rule indicators plus scan mode/status and score metadata are persisted.
+
+Accepted AI categories are validated against a centralized enum: phishing, bank impersonation, credential theft, fake payment notification, investment scam, job/recruitment scam, prize/giveaway scam, romance scam, delivery scam, account takeover attempt, social engineering, and unknown/insufficient evidence. Score must be 0–100, confidence is qualitative (low/medium/high, not calibrated), text length is bounded, and list counts are capped. Invalid AI output falls back to rules with `ai_status=validation_failed`; provider outage uses `unavailable`; disabled configuration uses `disabled`. `analysis_mode` remains `rules` for every fallback so a fallback is never confused with successful AI output.
+
+Fusion is deterministic and conservative. Let `R` be the rule score and `A` the validated AI score. The final score starts at `R`; if `A > R` and AI returned a known category, add a ceiling-rounded confidence share of the remaining difference: 15% for low, 25% for medium, or 40% for high confidence, capped at 100. Otherwise keep `R`. Thus AI never lowers any rule result, unknown classifications cannot raise a score, and AI indicators are not added to weighted rule indicators (avoiding duplicate evidence). Rule indicators, rule score, final score, AI assessment, and mode/status are separately visible. This heuristic has no calibration claim; evaluation against labeled representative data is required before any statistical performance claim.
+
+The route's existing 20-scans/hour user limiter remains in force. Hybrid requests have an additional five-per-user-per-hour in-process limit. Both limits reset on process restart and are not shared among instances; deploy an external shared limiter before horizontal scaling. Timeouts return rule results, and no paid API key is needed for rules-only operation or test suites. Do not enable AI until the organization has reviewed applicable data processing, regional, retention, and user-consent requirements.
 
 ## Testing and verification
 
@@ -252,7 +273,7 @@ go vet ./...
 go build -o /tmp/scamguard-api ./cmd/server
 ```
 
-Without `TEST_DATABASE_URL`, database tests explicitly skip. Authentication integration tests create an isolated temporary schema and remove it afterward; the test role needs schema creation privileges. They cover normalized registration, generic duplicates, validation, hashes, credentials, hashed sessions, rotation, expiry, revocation, protected profiles, safe updates, role escalation, CSRF, CORS, rate limits, production cookie flags, session caps, and rollback preserving users. Existing Phase 1 tests remain active. Rate limiter and Argon2 tests verify resource bounds and cancellation.
+Without `TEST_DATABASE_URL`, database tests explicitly skip. Authentication and scan persistence integration tests create isolated temporary schemas and remove them afterward; the test role needs schema creation privileges. They cover normalized registration, generic duplicates, validation, hashes, credentials, hashed sessions, rotation, expiry, revocation, protected profiles, safe updates, role escalation, CSRF, CORS, rate limits, production cookie flags, session caps, migrations, ownership, and private scan storage. Mocked AI provider tests cover structured output, prompt injection data boundaries, redaction, timeout, retries, provider errors, and malformed responses; no paid key is needed. Existing Phase 1 and Phase 3 tests remain active. Rate limiter and Argon2 tests verify resource bounds and cancellation.
 
 Frontend:
 
@@ -293,7 +314,7 @@ Before external URL fetching, implement SSRF protection: HTTP(S) only; reject cr
 
 ## Roadmap and contributions
 
-Phase 1 and Phase 2 foundations are merged. Phase 3 provides a deterministic, explainable detection engine and authenticated scanners; review this phase before merging. Phase 4 may add an AI second opinion. Phase 5 may add scan history and analytics. AI analysis, advanced phishing classification, and external URL fetching are not part of Phase 3.
+Phase 1 and Phase 2 foundations are merged. Phase 3 provides deterministic, explainable rules; Phase 4 adds optional AI second-opinion analysis. Phase 5 may add user-facing scan history and analytics. External URL fetching remains out of scope.
 
 Branch from current `main`, use focused commits, run the checks above, and document behavior, tests, and limitations in a pull request. Never commit real credentials, environment files, browser profiles, or user data. Do not merge automatically.
 

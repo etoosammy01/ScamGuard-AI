@@ -43,7 +43,7 @@ func TestPrivateScanPersistenceAndOwnership(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, direction := range []string{"up", "up", "up"} {
+	for _, direction := range []string{"up", "up", "up", "up"} {
 		if err = migrations.Apply(ctx, conn.Conn(), direction); err != nil {
 			t.Fatal(err)
 		}
@@ -54,13 +54,13 @@ func TestPrivateScanPersistenceAndOwnership(t *testing.T) {
 		t.Fatal(err)
 	}
 	store := &repository.Scans{DB: pool}
-	result := models.ScanResult{ScanType: "message", RiskScore: 30, RiskLevel: "moderate", Category: "phishing", Indicators: []models.Indicator{{RuleID: "fixture", Category: "url", Description: "synthetic fixture", ScoreContribution: 30}}, AnalysisMode: "rules"}
+	result := models.ScanResult{ScanType: "message", RiskScore: 30, RiskLevel: "moderate", Category: "phishing", Indicators: []models.Indicator{{RuleID: "fixture", Category: "url", Description: "synthetic fixture", ScoreContribution: 30}}, AnalysisMode: "rules", AIStatus: "not_requested", RuleScore: 30, FinalScore: 30}
 	created, err := store.Create(ctx, userID, result)
 	if err != nil {
 		t.Fatal(err)
 	}
 	loaded, err := store.Get(ctx, userID, created.ScanID)
-	if err != nil || len(loaded.Indicators) != 1 || loaded.RiskScore != 30 {
+	if err != nil || len(loaded.Indicators) != 1 || loaded.RiskScore != 30 || loaded.RuleScore != 30 || loaded.AIStatus != "not_requested" {
 		t.Fatal(loaded, err)
 	}
 	if _, err = store.Get(ctx, "another-user", created.ScanID); err == nil {
