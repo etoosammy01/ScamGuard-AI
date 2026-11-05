@@ -33,40 +33,8 @@ func run() error {
 		return err
 	}
 	defer conn.Close(context.Background())
-	tx, err := conn.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(context.Background())
-	if _, err = tx.Exec(ctx, "SELECT pg_advisory_xact_lock(734129)"); err != nil {
-		return err
-	}
-	if _, err = tx.Exec(ctx, "CREATE TABLE IF NOT EXISTS schema_migrations(version integer PRIMARY KEY)"); err != nil {
-		return err
-	}
-	var exists bool
-	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=$1)", 1).Scan(&exists); err != nil {
-		return err
-	}
 	direction := os.Args[1]
-	if (direction == "up" && !exists) || (direction == "down" && exists) {
-		sql, err := migrations.Files.ReadFile("001_initial." + direction + ".sql")
-		if err != nil {
-			return err
-		}
-		if _, err = tx.Exec(ctx, string(sql)); err != nil {
-			return err
-		}
-		if direction == "up" {
-			_, err = tx.Exec(ctx, "INSERT INTO schema_migrations(version) VALUES($1)", 1)
-		} else {
-			_, err = tx.Exec(ctx, "DELETE FROM schema_migrations WHERE version=$1", 1)
-		}
-		if err != nil {
-			return err
-		}
-	}
-	if err = tx.Commit(ctx); err != nil {
+	if err = migrations.Apply(ctx, conn, direction); err != nil {
 		return err
 	}
 	fmt.Println("Migration", direction, "complete")

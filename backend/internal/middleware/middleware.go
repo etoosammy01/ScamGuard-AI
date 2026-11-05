@@ -15,7 +15,7 @@ func Security() gin.HandlerFunc {
 		c.Header("X-Frame-Options", "DENY")
 		c.Header("Referrer-Policy", "no-referrer")
 		c.Header("Cache-Control", "no-store")
-		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 1<<20)
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 16*1024)
 		c.Next()
 	}
 }
@@ -51,13 +51,15 @@ func CORS(origins []string) gin.HandlerFunc {
 				return
 			}
 			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Access-Control-Allow-Credentials", "true")
 		}
 		if c.Request.Method == http.MethodOptions {
-			if c.GetHeader("Access-Control-Request-Method") != "GET" {
+			method := c.GetHeader("Access-Control-Request-Method")
+			if method != "GET" && method != "POST" && method != "PATCH" {
 				handlers.Error(c, 405, "method_not_allowed", "Method is not allowed")
 				return
 			}
-			c.Header("Access-Control-Allow-Methods", "GET, OPTIONS")
+			c.Header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
 			c.Header("Access-Control-Allow-Headers", "Content-Type")
 			c.AbortWithStatus(204)
 			return

@@ -12,7 +12,9 @@ import (
 
 	"github.com/etoosammy01/ScamGuard-AI/backend/internal/config"
 	"github.com/etoosammy01/ScamGuard-AI/backend/internal/database"
+	"github.com/etoosammy01/ScamGuard-AI/backend/internal/repository"
 	"github.com/etoosammy01/ScamGuard-AI/backend/internal/router"
+	"github.com/etoosammy01/ScamGuard-AI/backend/internal/services"
 )
 
 func main() {
@@ -33,7 +35,12 @@ func run() error {
 		return errors.New("database configuration failed")
 	}
 	defer db.Close()
-	s := &http.Server{Addr: ":" + c.Port, Handler: router.New(db, c.Origins), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
+	passwords, err := services.NewPasswords()
+	if err != nil {
+		return errors.New("password service initialization failed")
+	}
+	auth := &services.Auth{Store: &repository.Accounts{DB: db}, Passwords: passwords, Lifetime: c.SessionLifetime}
+	s := &http.Server{Addr: ":" + c.Port, Handler: router.New(db, c.Origins, router.AuthOptions{Service: auth, Config: c}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
 	done := make(chan error, 1)
 	go func() { slog.Info("server listening", "port", c.Port); done <- s.ListenAndServe() }()
 	select {

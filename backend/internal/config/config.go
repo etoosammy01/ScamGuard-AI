@@ -6,11 +6,14 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
 	Environment, Port, DatabaseURL string
 	Origins                        []string
+	SessionLifetime                time.Duration
+	SecureCookies                  bool
 }
 
 func Load() (Config, error) { return Parse(os.Getenv) }
@@ -47,5 +50,20 @@ func Parse(get func(string) string) (Config, error) {
 		}
 		c.Origins = append(c.Origins, origin)
 	}
+	hours := 12
+	if raw := get("SESSION_TTL_HOURS"); raw != "" {
+		hours, e = strconv.Atoi(raw)
+		if e != nil || hours < 1 || hours > 24 {
+			return c, fmt.Errorf("invalid SESSION_TTL_HOURS (1-24)")
+		}
+	}
+	c.SessionLifetime = time.Duration(hours) * time.Hour
+	c.SecureCookies = c.Environment == "production"
 	return c, nil
+}
+func (c Config) CookieName() string {
+	if c.SecureCookies {
+		return "__Host-scamguard_session"
+	}
+	return "scamguard_session"
 }
