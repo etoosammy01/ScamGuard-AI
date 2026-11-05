@@ -1,12 +1,13 @@
+import Link from "next/link";
 import { ShieldCheck, ArrowUpRight } from "lucide-react";
 export function Brand() {
   return (
-    <a className="brand" href="#home" aria-label="ScamGuard AI home">
+    <Link className="brand" href="/#home" aria-label="ScamGuard AI home">
       <span className="brand-mark">
         <ShieldCheck size={23} />
       </span>
       ScamGuard<span className="brand-ai">AI</span>
-    </a>
+    </Link>
   );
 }
 export function Navbar() {
@@ -17,11 +18,11 @@ export function Navbar() {
         <div className="nav-links">
           <a href="#features">Features</a>
           <a href="#how-it-works">How it works</a>
-          <a href="#dashboard">Dashboard</a>
+          <Link href="/dashboard">Dashboard</Link>
         </div>
-        <a className="button small" href="#scanner">
-          Explore scanner <ArrowUpRight size={15} />
-        </a>
+        <Link className="button small" href="/login">
+          Sign in <ArrowUpRight size={15} />
+        </Link>
       </nav>
     </header>
   );
