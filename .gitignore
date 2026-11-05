@@ -10,3 +10,5 @@ backend/bin/
 .DS_Store
 
 *.tsbuildinfo
+
+/backend/server

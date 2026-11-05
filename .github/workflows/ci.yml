@@ -1,7 +1,7 @@
-name: Foundation CI
+name: ScamGuard CI
 on:
   push:
-    branches: [main, feature/phase-1-foundation]
+    branches: [main, feature/phase-1-foundation, feature/phase-2-authentication]
   pull_request:
     branches: [main]
 permissions:
@@ -42,6 +42,40 @@ jobs:
       - run: go run ./cmd/migrate down
       - run: go run ./cmd/migrate up
       - run: go build ./cmd/server
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build frontend for authentication browser test
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8080
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: |
+          npm ci
+          npm run build
+      - name: Verify authentication in Chrome
+        working-directory: .
+        run: |
+          ./backend/server > /tmp/scamguard-api.log 2>&1 &
+          API_PID=$!
+          (cd frontend && npm start) > /tmp/scamguard-web.log 2>&1 &
+          WEB_PID=$!
+          google-chrome --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
+            --remote-debugging-port=9224 --user-data-dir="$RUNNER_TEMP/scamguard-chrome" \
+            about:blank > /tmp/scamguard-chrome.log 2>&1 &
+          CHROME_PID=$!
+          trap 'kill "$API_PID" "$WEB_PID" "$CHROME_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/api/v1/health/ready > /dev/null 2>&1 && \
+               curl -fsS http://localhost:3000/login > /dev/null 2>&1 && \
+               curl -fsS http://127.0.0.1:9224/json/version > /dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          npm --prefix frontend run test:browser
   frontend:
     runs-on: ubuntu-latest
     defaults:
