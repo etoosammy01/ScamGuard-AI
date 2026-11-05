@@ -253,13 +253,13 @@ func TestAuthenticationIntegration(t *testing.T) {
 			} `json:"items"`
 			Total int `json:"total"`
 		}
-		if err := json.Unmarshal(listed.Body.Bytes(), &page); err != nil || len(page.Items) != 1 || page.Total != 2 {
+		if err := json.Unmarshal(listed.Body.Bytes(), &page); err != nil || len(page.Items) != 1 || page.Total != 20 {
 			t.Fatalf("pagination returned unexpected history: %+v %v", page, err)
 		}
 		id := page.Items[0].ScanID
 		stats := request(app, "GET", "/api/v1/dashboard/stats", "", "", cookie)
 		requireCode(stats, 200)
-		if !strings.Contains(stats.Body.String(), `"total_scans":2`) || !strings.Contains(stats.Body.String(), `"activity":[`) {
+		if !strings.Contains(stats.Body.String(), `"total_scans":20`) || !strings.Contains(stats.Body.String(), `"activity":[`) {
 			t.Fatalf("unexpected real dashboard stats: %s", stats.Body.String())
 		}
 		requireCode(request(app, "GET", "/api/v1/scans/"+id, "", "", cookie), 200)
@@ -267,13 +267,13 @@ func TestAuthenticationIntegration(t *testing.T) {
 		exported := request(app, "GET", "/api/v1/scans/export", "", "", cookie)
 		requireCode(exported, 200)
 		rows, err := csv.NewReader(strings.NewReader(exported.Body.String())).ReadAll()
-		if err != nil || len(rows) != 3 || rows[0][0] != "Scan ID" {
+		if err != nil || len(rows) != 21 || rows[0][0] != "Scan ID" {
 			t.Fatalf("invalid metadata export: rows=%d err=%v", len(rows), err)
 		}
 		requireCode(request(app, "DELETE", "/api/v1/scans/"+id, "", "https://evil.example", cookie), 403)
 		requireCode(request(app, "DELETE", "/api/v1/scans/"+id, "", origin, cookie), 204)
 		stats = request(app, "GET", "/api/v1/dashboard/stats", "", "", cookie)
-		if !strings.Contains(stats.Body.String(), `"total_scans":1`) {
+		if !strings.Contains(stats.Body.String(), `"total_scans":19`) {
 			t.Fatalf("deleted scan remained in dashboard: %s", stats.Body.String())
 		}
 		bulk := request(app, "DELETE", "/api/v1/scans", "", origin, cookie)
@@ -281,7 +281,7 @@ func TestAuthenticationIntegration(t *testing.T) {
 		var count struct {
 			Deleted int `json:"deleted"`
 		}
-		if err := json.Unmarshal(bulk.Body.Bytes(), &count); err != nil || count.Deleted != 1 {
+		if err := json.Unmarshal(bulk.Body.Bytes(), &count); err != nil || count.Deleted != 19 {
 			t.Fatalf("bulk delete count=%+v err=%v", count, err)
 		}
 		stats = request(app, "GET", "/api/v1/dashboard/stats", "", "", cookie)
