@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "tsx --test tests/*.test.tsx",
-    "test:browser": "node scripts/auth-smoke.mjs"
+    "test:browser": "node scripts/auth-smoke.mjs",
+    "test:admin-browser": "node scripts/admin-smoke.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.69.0",

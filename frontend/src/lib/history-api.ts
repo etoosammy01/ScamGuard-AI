@@ -55,3 +55,19 @@ export async function downloadScanCSV(filters: ScanFilters): Promise<Blob> {
   if (!response.headers.get("content-type")?.includes("text/csv")) throw new APIError(0, "invalid_response", "The export response was not a CSV file.");
   return response.blob();
 }
+
+export async function downloadSecurityReport(id: string): Promise<Blob> {
+  const api = base();
+  if (!api) throw new Error("API URL is not configured.");
+  const response = await fetch(`${api}/api/v1/scans/${encodeURIComponent(id)}/report`, {
+    credentials: "include", cache: "no-store", signal: AbortSignal.timeout(15000),
+  });
+  if (!response.ok) {
+    if (response.status === 401 && typeof window !== "undefined") window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    throw new Error("Security report could not be downloaded. Please try again.");
+  }
+  if (!response.headers.get("content-type")?.includes("application/pdf")) throw new Error("The server did not return a PDF report.");
+  const blob = await response.blob();
+  if (!blob.size || blob.size > 2 * 1024 * 1024 || !((await blob.slice(0, 5).text()) === "%PDF-")) throw new Error("The PDF report was invalid.");
+  return blob;
+}

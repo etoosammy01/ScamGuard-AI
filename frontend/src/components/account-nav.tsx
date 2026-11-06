@@ -33,6 +33,7 @@ export function AccountNav() {
           <Link href="/dashboard">Dashboard</Link>
           <Link href="/history">History</Link>
           <Link href="/profile">Profile</Link>
+          {state.status === "authenticated" && state.user.role === "admin" && <Link href="/admin">Admin</Link>}
           {state.status === "authenticated" && (
             <Button
               className="secondary small"

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./admin.css";
 import { AuthProvider } from "@/components/auth-provider";
 export const metadata: Metadata = {
   title: "ScamGuard AI — Stay one step ahead",

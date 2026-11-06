@@ -1,0 +1,123 @@
+.admin-page {
+  padding-bottom: 4rem;
+}
+.admin-nav,
+.admin-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.admin-nav a {
+  padding: 0.6rem 1rem;
+  border-radius: 0.4rem;
+  background: #edf2fa;
+  color: #153b70;
+}
+.admin-nav a[aria-current] {
+  background: #153b70;
+  color: white;
+}
+.admin-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.admin-metrics strong {
+  font-size: 2rem;
+}
+.admin-metrics h2 {
+  font-size: 1.1rem;
+  text-transform: capitalize;
+}
+.admin-table-scroll {
+  overflow-x: auto;
+}
+.admin-page table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.admin-page caption {
+  text-align: left;
+  padding: 1rem 0;
+  font-weight: 600;
+}
+.admin-page th,
+.admin-page td {
+  padding: 1rem;
+  border-bottom: 1px solid #dbe2ed;
+}
+.admin-page td {
+  overflow-wrap: anywhere;
+}
+.admin-page th {
+  background: #edf2fa;
+}
+.admin-page input,
+.admin-page select {
+  padding: 0.6rem;
+  border: 1px solid #aab8cc;
+  border-radius: 0.4rem;
+  max-width: 100%;
+  background: white;
+  color: #142d50;
+}
+.admin-definitions div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.6rem 0;
+}
+.admin-definitions dt {
+  font-weight: 600;
+  min-width: 12rem;
+  text-transform: capitalize;
+}
+.admin-definitions dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.admin-chart {
+  list-style: none;
+  padding: 0;
+  max-height: 26rem;
+  overflow: auto;
+}
+.admin-chart li {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem;
+  margin: 0.8rem 0;
+}
+.admin-chart meter {
+  width: 100%;
+  grid-column: 1 / -1;
+  accent-color: #2666c2;
+}
+.admin-chart li span:last-child {
+  grid-row: 1;
+  grid-column: 2;
+  text-align: right;
+}
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #0c1e39aa;
+  display: grid;
+  place-items: center;
+  z-index: 100;
+  padding: 1rem;
+}
+.admin-modal {
+  background: white;
+  color: #142d50;
+  padding: 2rem;
+  max-width: 32rem;
+  border-radius: 1rem;
+}
+.admin-modal button {
+  margin: 0.5rem;
+}
