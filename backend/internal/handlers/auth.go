@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"io"
 	"mime"
@@ -11,6 +10,7 @@ import (
 	"github.com/etoosammy01/ScamGuard-AI/backend/internal/config"
 	"github.com/etoosammy01/ScamGuard-AI/backend/internal/models"
 	"github.com/etoosammy01/ScamGuard-AI/backend/internal/services"
+	"github.com/etoosammy01/ScamGuard-AI/backend/internal/strictjson"
 	"github.com/gin-gonic/gin"
 )
 
@@ -26,14 +26,9 @@ func decode(c *gin.Context, value any) bool {
 		return false
 	}
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 16*1024)
-	decoder := json.NewDecoder(c.Request.Body)
-	decoder.DisallowUnknownFields()
-	if err = decoder.Decode(value); err != nil {
-		Error(c, 400, "invalid_input", "Invalid request fields or body size")
-		return false
-	}
-	if err = decoder.Decode(&struct{}{}); err != io.EOF {
-		Error(c, 400, "invalid_input", "Send one JSON object")
+	data, err := io.ReadAll(c.Request.Body)
+	if err != nil || strictjson.Decode(data, value) != nil {
+		Error(c, 400, "invalid_input", "Send one unambiguous JSON object with valid fields")
 		return false
 	}
 	return true

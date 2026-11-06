@@ -3,7 +3,7 @@ package ai
 import (
 	"encoding/json"
 	"errors"
-	"io"
+	"github.com/etoosammy01/ScamGuard-AI/backend/internal/strictjson"
 	"strings"
 	"unicode/utf8"
 )
@@ -54,13 +54,18 @@ type Assessment struct {
 
 func DecodeAssessment(raw string) (Assessment, error) {
 	var a Assessment
-	decoder := json.NewDecoder(strings.NewReader(raw))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&a); err != nil {
+	if len(raw) > 16000 || strictjson.Decode([]byte(raw), &a) != nil {
 		return Assessment{}, ErrInvalidOutput
 	}
-	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+	var fields map[string]json.RawMessage
+	if json.Unmarshal([]byte(raw), &fields) != nil {
 		return Assessment{}, ErrInvalidOutput
+	}
+	for _, key := range []string{"category", "risk_score", "confidence", "indicators", "explanation", "recommendations"} {
+		v, ok := fields[key]
+		if !ok || string(v) == "null" {
+			return Assessment{}, ErrInvalidOutput
+		}
 	}
 	if !a.Category.Valid() || a.RiskScore < 0 || a.RiskScore > 100 || !a.Confidence.Valid() ||
 		len(a.Indicators) > 8 || len(a.Recommendations) > 6 ||

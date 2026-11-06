@@ -1,0 +1,3 @@
+# Reviewed false positive: prose describing session digests and expiry timestamps.
+# Exact historical commit/path/rule/line only; no global rule or path exclusions.
+a8312b0313aeb3c06afc4ee75e8d6a89c2d25233:README.md:generic-api-key:181

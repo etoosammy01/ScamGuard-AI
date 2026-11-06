@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+var sensitivePattern = regexp.MustCompile(`\b(?:passwords?|passcodes?|one[- ]time codes?|verification codes?|otps?|pin numbers?|security codes?|bvn|nin)\b`)
+
 var linkPattern = regexp.MustCompile(`(?i)\b(?:https?://|www\.)[^\s<>\"']+`)
 
 var officialBrandDomains = map[string][]string{
@@ -43,12 +45,25 @@ func AnalyzeMessage(content string) models.ScanResult {
 		findings = append(findings, Finding{id, category, description, weight, group, scam, priority})
 	}
 	urgent := containsAny(text, "urgent", "immediately", "act now", "within 24 hours", "final warning", "limited time", "right away", "do not delay", "suspended today")
-	sensitive := containsAny(text, "password", "passcode", "one-time code", "one time code", "verification code", "otp", "pin number", "security code")
-	safeCredentialNotice := containsAny(text, "never share", "do not share", "don't share", "will never ask", "never ask for your password")
-	asksSensitive := sensitive && !safeCredentialNotice && containsAny(text, "send", "share", "provide", "enter", "confirm", "reply with", "give us", "verify your", "tell me", "submit")
+	asksSensitive := false
+	// A safety notice in one sentence must not suppress a credential request elsewhere.
+	clauses := strings.NewReplacer(" but ", ";", " however ", ";").Replace(text)
+	for _, clause := range strings.FieldsFunc(clauses, func(r rune) bool { return strings.ContainsRune(".!?;\n", r) }) {
+		sensitive := sensitivePattern.MatchString(clause)
+		notice := containsAny(clause, "never share", "do not share", "don't share", "no share", "will never ask", "never ask for")
+		if sensitive && !notice && containsAny(clause, "send", "share", "provide", "enter", "confirm", "reply with", "give us", "verify your", "tell me", "submit") {
+			asksSensitive = true
+		}
+	}
 	impersonation := containsAny(text, "bank", "account security", "security team", "support team", "microsoft support", "apple support", "paypal", "amazon support", "your account")
 	bankIdentity := containsAny(text, "bank", "credit union", "bank of america", "chase", "wells fargo", "visa", "mastercard")
-	payment := containsAny(text, "pay a fee", "processing fee", "release fee", "advance fee", "wire transfer", "gift card", "pay us", "send money", "registration fee", "redelivery fee", "customs fee")
+	payment := false
+	for _, clause := range strings.FieldsFunc(clauses, func(r rune) bool { return strings.ContainsRune(".!?;\n", r) }) {
+		if containsAny(clause, "do not send money", "don't send money", "never send money", "no send money") {
+			continue
+		}
+		payment = payment || containsAny(clause, "pay a fee", "processing fee", "release fee", "advance fee", "wire transfer", "gift card", "pay us", "send money", "registration fee", "redelivery fee", "customs fee")
+	}
 	prize := containsAny(text, "you won", "winner", "congratulations", "claim your prize", "giveaway", "lottery")
 	financial := containsAny(text, "guaranteed returns", "risk-free profit", "double your money", "guaranteed profit", "secret investment")
 	suspension := containsAny(text, "account suspended", "account will be suspended", "account has been suspended", "account locked", "account will be closed", "unusual sign-in", "verify your account")
@@ -141,17 +156,18 @@ func messageBrandLinkMismatch(text, raw string) bool {
 	if err != nil {
 		return true
 	}
+	mentioned := false
 	for brand, domains := range officialBrandDomains {
 		pattern := regexp.MustCompile(`(?:^|[^a-z0-9])` + regexp.QuoteMeta(brand) + `(?:$|[^a-z0-9])`)
 		if !pattern.MatchString(text) {
 			continue
 		}
+		mentioned = true
 		for _, domain := range domains {
 			if registered == domain {
 				return false
 			}
 		}
-		return true
 	}
-	return false
+	return mentioned
 }

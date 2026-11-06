@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/etoosammy01/ScamGuard-AI/backend/internal/models"
+	"github.com/etoosammy01/ScamGuard-AI/backend/internal/strictjson"
 )
 
 const (
@@ -39,6 +40,7 @@ type Metrics struct {
 }
 
 type Client struct {
+	timeout      time.Duration
 	apiKey       string
 	model        string
 	maxTokens    int
@@ -56,10 +58,12 @@ func NewClient(apiKey, model string, timeout time.Duration, maxOutputTokens int)
 	if strings.TrimSpace(apiKey) == "" || strings.TrimSpace(model) == "" || timeout < time.Second || timeout > 30*time.Second || maxOutputTokens < 100 || maxOutputTokens > 2000 {
 		return nil, errors.New("invalid AI client configuration")
 	}
-	return &Client{apiKey: apiKey, model: model, maxTokens: maxOutputTokens, http: &http.Client{Timeout: timeout}, endpoint: responsesEndpoint}, nil
+	return &Client{apiKey: apiKey, model: model, maxTokens: maxOutputTokens, timeout: timeout, http: &http.Client{Timeout: timeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, endpoint: responsesEndpoint}, nil
 }
 
 func (c *Client) Analyze(ctx context.Context, kind, content string, signals []models.Indicator) (Assessment, Usage, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
 	max := MaxContentBytes
 	if kind == "url" {
 		max = 2048
@@ -133,8 +137,17 @@ func (c *Client) Analyze(ctx context.Context, kind, content string, signals []mo
 			slog.Warn("AI provider request failed", "status", status)
 			return Assessment{}, Usage{}, ErrUnavailable
 		}
-		limited := io.LimitReader(resp.Body, 1<<20)
-		decodeErr := json.NewDecoder(limited).Decode(&response)
+		raw, readErr := io.ReadAll(io.LimitReader(resp.Body, (1<<20)+1))
+		decodeErr := readErr
+		if decodeErr == nil && len(raw) > 1<<20 {
+			decodeErr = ErrInvalidOutput
+		}
+		if decodeErr == nil {
+			decodeErr = strictjson.Validate(raw)
+		}
+		if decodeErr == nil {
+			decodeErr = json.Unmarshal(raw, &response)
+		}
 		_ = resp.Body.Close()
 		if decodeErr != nil {
 			c.failed.Add(1)

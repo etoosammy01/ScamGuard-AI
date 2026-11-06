@@ -14,6 +14,7 @@ func Security() gin.HandlerFunc {
 		c.Header("X-Content-Type-Options", "nosniff")
 		c.Header("X-Frame-Options", "DENY")
 		c.Header("Referrer-Policy", "no-referrer")
+		c.Header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
 		c.Header("Cache-Control", "no-store")
 		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 16*1024)
 		c.Next()
@@ -44,6 +45,11 @@ func CORS(origins []string) gin.HandlerFunc {
 	}
 	return func(c *gin.Context) {
 		c.Header("Vary", "Origin")
+		values := c.Request.Header.Values("Origin")
+		if len(values) > 1 {
+			handlers.Error(c, 403, "origin_denied", "Origin is not allowed")
+			return
+		}
 		origin := c.GetHeader("Origin")
 		if origin != "" {
 			if !allowed[origin] {

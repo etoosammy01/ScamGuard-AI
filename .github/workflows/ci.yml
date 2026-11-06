@@ -1,13 +1,15 @@
 name: ScamGuard CI
 on:
   push:
-    branches: [main, feature/phase-1-foundation, feature/phase-2-authentication, feature/phase-3-detection-engine, feature/phase-4-ai-detection, feature/phase-5-dashboard-history, feature/phase-6-admin-reports]
+    branches: [main, feature/phase-1-foundation, feature/phase-2-authentication, feature/phase-3-detection-engine, feature/phase-4-ai-detection, feature/phase-5-dashboard-history, feature/phase-6-admin-reports, feature/phase-7-security-hardening]
   pull_request:
     branches: [main]
 permissions:
   contents: read
 jobs:
   backend:
+    name: Backend checks
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -28,10 +30,12 @@ jobs:
       TEST_DATABASE_URL: postgres://scamguard:ci_only_password@localhost:5432/scamguard?sslmode=disable
       CORS_ALLOWED_ORIGINS: http://localhost:3000
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          go-version: stable
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
       - run: go mod download
       - run: test -z "$(gofmt -l .)"
@@ -39,10 +43,12 @@ jobs:
       - run: go run ./cmd/migrate up
       - run: go run ./cmd/migrate up
       - run: go test -race ./...
+      - run: go run ./cmd/evaluate
+      - run: go test ./internal/detection -run=^$ -fuzz=FuzzURLParser -fuzztime=5s -parallel=2
       - run: go run ./cmd/migrate down
       - run: go run ./cmd/migrate up
       - run: go build ./cmd/server
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24'
           cache: npm
@@ -76,10 +82,29 @@ jobs:
             sleep 1
           done
           npm --prefix frontend run test:browser
+          kill "$API_PID"
+          wait "$API_PID" || true
+          ./backend/server > /tmp/scamguard-api.log 2>&1 &
+          API_PID=$!
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/api/v1/health/ready > /dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          npm --prefix frontend run test:security-browser
+          kill "$API_PID"
+          wait "$API_PID" || true
+          ./backend/server > /tmp/scamguard-api.log 2>&1 &
+          API_PID=$!
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/api/v1/health/ready > /dev/null 2>&1; then break; fi
+            sleep 1
+          done
           (cd backend && go build -o /tmp/scamguard-admin ./cmd/admin)
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "INSERT INTO users(full_name,email,password_hash) SELECT 'Pagination Fixture', 'phase6-fixture-'||n||'@example.invalid', 'unusable-test-hash' FROM generate_series(1,25) n"
           SMOKE_ADMIN_BINARY=/tmp/scamguard-admin SMOKE_EXPECT_PAGINATION=1 npm --prefix frontend run test:admin-browser
   frontend:
+    name: Frontend checks
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -88,8 +113,10 @@ jobs:
       NEXT_PUBLIC_API_URL: http://localhost:8080
       NEXT_TELEMETRY_DISABLED: '1'
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24'
           cache: npm
@@ -99,3 +126,34 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  security:
+    name: Security checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Scan Go vulnerabilities
+        working-directory: backend
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          govulncheck ./...
+      - name: Scan npm dependencies
+        working-directory: frontend
+        run: npm audit --audit-level=low
+      - name: Scan git history for secrets
+        run: |
+          go install github.com/zricethezav/gitleaks/v8@v8.30.1
+          python3 scripts/scan-secrets.py

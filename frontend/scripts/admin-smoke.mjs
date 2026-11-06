@@ -2,10 +2,12 @@
 // Uses Node 24's WebSocket support, so no browser-testing dependency is required.
 import { execFileSync } from "node:child_process";
 import assert from "node:assert/strict";
+import { assertLocalTargets } from "./local-targets.mjs";
 import { randomUUID } from "node:crypto";
 const app = process.env.SMOKE_APP_URL ?? "http://localhost:3000";
 const api = process.env.SMOKE_API_URL ?? "http://localhost:8080";
 const debug = process.env.CHROME_DEBUG_URL ?? "http://127.0.0.1:9224";
+assertLocalTargets([app, api, debug]);
 const target = await (
   await fetch(`${debug}/json/new?about:blank`, { method: "PUT" })
 ).json();
