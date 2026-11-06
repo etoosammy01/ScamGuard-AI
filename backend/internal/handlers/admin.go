@@ -8,9 +8,6 @@ import (
 	"github.com/etoosammy01/ScamGuard-AI/backend/internal/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
-	"io"
-	"mime"
-	"net/http"
 	"strconv"
 	"time"
 )
@@ -128,18 +125,13 @@ func (h *AdminHandler) Status(c *gin.Context) {
 	if !adminQuery(c) {
 		return
 	}
-	media, _, mediaErr := mime.ParseMediaType(c.GetHeader("Content-Type"))
-	if mediaErr != nil || media != "application/json" {
-		Error(c, 415, "unsupported_media_type", "Use application/json")
-		return
-	}
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 1024)
 	var body struct {
 		Status string `json:"status"`
 	}
-	decoder := json.NewDecoder(c.Request.Body)
-	decoder.DisallowUnknownFields()
-	if decoder.Decode(&body) != nil || decoder.Decode(&struct{}{}) != io.EOF || !oneOf(body.Status, "active", "suspended") {
+	if !decode(c, &body) {
+		return
+	}
+	if !oneOf(body.Status, "active", "suspended") {
 		Error(c, 400, "invalid_status", "Only active or suspended status is accepted")
 		return
 	}

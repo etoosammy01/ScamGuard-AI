@@ -1,0 +1,471 @@
+[
+  {
+    "id": "benign-01",
+    "kind": "message",
+    "label": "negative",
+    "group": "benign",
+    "input": "Team meeting is at 10 tomorrow. Please bring your notes."
+  },
+  {
+    "id": "benign-02",
+    "kind": "message",
+    "label": "negative",
+    "group": "benign",
+    "input": "Our bank will never ask you to share your OTP or password."
+  },
+  {
+    "id": "benign-03",
+    "kind": "message",
+    "label": "negative",
+    "group": "benign",
+    "input": "Your monthly statement is ready in your banking app."
+  },
+  {
+    "id": "benign-04",
+    "kind": "message",
+    "label": "negative",
+    "group": "benign",
+    "input": "Urgent: the office fire alarm is being tested today."
+  },
+  {
+    "id": "benign-05",
+    "kind": "message",
+    "label": "negative",
+    "group": "benign",
+    "input": "Please reset your password in the app you installed from the official store."
+  },
+  {
+    "id": "benign-06",
+    "kind": "message",
+    "label": "negative",
+    "group": "benign",
+    "input": "Thanks for paying the delivery fee agreed at checkout."
+  },
+  {
+    "id": "benign-07",
+    "kind": "message",
+    "label": "negative",
+    "group": "benign",
+    "input": "The investment can lose value. Please review the regulated prospectus."
+  },
+  {
+    "id": "benign-08",
+    "kind": "message",
+    "label": "negative",
+    "group": "benign",
+    "input": "The job interview is on Monday; no application fee is required."
+  },
+  {
+    "id": "benign-09",
+    "kind": "message",
+    "label": "negative",
+    "group": "benign",
+    "input": "Do not send money to strangers claiming you won a lottery."
+  },
+  {
+    "id": "benign-10",
+    "kind": "message",
+    "label": "negative",
+    "group": "benign",
+    "input": "Congratulations on finishing your course!"
+  },
+  {
+    "id": "benign-11",
+    "kind": "message",
+    "label": "negative",
+    "group": "benign",
+    "input": "Contact support through the number on your bank card."
+  },
+  {
+    "id": "benign-12",
+    "kind": "message",
+    "label": "negative",
+    "group": "benign",
+    "input": "Please send the meeting agenda, not account credentials."
+  },
+  {
+    "id": "benign-13",
+    "kind": "message",
+    "label": "negative",
+    "group": "benign",
+    "input": "Keep your BVN private. Never share your NIN with strangers."
+  },
+  {
+    "id": "benign-14",
+    "kind": "message",
+    "label": "negative",
+    "group": "benign",
+    "input": "Your code is 123456. Do not share this code with anyone."
+  },
+  {
+    "id": "benign-15",
+    "kind": "message",
+    "label": "negative",
+    "group": "benign",
+    "input": "Your bank account statement is attached to your secure app inbox."
+  },
+  {
+    "id": "bank-01",
+    "kind": "message",
+    "label": "positive",
+    "group": "bank",
+    "input": "URGENT: GTBank account suspended today. Send your OTP to verify your account immediately."
+  },
+  {
+    "id": "bank-02",
+    "kind": "message",
+    "label": "positive",
+    "group": "bank",
+    "input": "Access Bank security team: provide your password to restore your account now."
+  },
+  {
+    "id": "bank-03",
+    "kind": "message",
+    "label": "positive",
+    "group": "bank",
+    "input": "Zenith Bank verification: send your BVN and NIN to this support agent."
+  },
+  {
+    "id": "bank-04",
+    "kind": "message",
+    "label": "positive",
+    "group": "bank",
+    "input": "Your bank account will be suspended. Verify your password at https://bank-verify.invalid/login now."
+  },
+  {
+    "id": "credentials-01",
+    "kind": "message",
+    "label": "positive",
+    "group": "credentials",
+    "input": "Share your OTP so I can complete the transfer for you."
+  },
+  {
+    "id": "credentials-02",
+    "kind": "message",
+    "label": "positive",
+    "group": "credentials",
+    "input": "Enter your password at https://microsoft-login.invalid to verify your account."
+  },
+  {
+    "id": "credentials-03",
+    "kind": "message",
+    "label": "positive",
+    "group": "credentials",
+    "input": "Never share your password. Send your OTP to our agent now."
+  },
+  {
+    "id": "credentials-04",
+    "kind": "message",
+    "label": "positive",
+    "group": "credentials",
+    "input": "We will never ask for your password but please submit your OTP here."
+  },
+  {
+    "id": "credentials-05",
+    "kind": "message",
+    "label": "positive",
+    "group": "credentials",
+    "input": "Reply with your one-time code to approve this payment."
+  },
+  {
+    "id": "prize-01",
+    "kind": "message",
+    "label": "positive",
+    "group": "prize",
+    "input": "Congratulations! You won NGN 500000. Pay a processing fee to claim your prize."
+  },
+  {
+    "id": "prize-02",
+    "kind": "message",
+    "label": "positive",
+    "group": "prize",
+    "input": "You are the lottery winner. Send money for a release fee today."
+  },
+  {
+    "id": "prize-03",
+    "kind": "message",
+    "label": "positive",
+    "group": "prize",
+    "input": "Claim your giveaway prize after paying a registration fee."
+  },
+  {
+    "id": "advance-fee-01",
+    "kind": "message",
+    "label": "positive",
+    "group": "advance-fee",
+    "input": "Send money for an advance fee to release your inheritance."
+  },
+  {
+    "id": "advance-fee-02",
+    "kind": "message",
+    "label": "positive",
+    "group": "advance-fee",
+    "input": "Pay a processing fee to unlock the CBN grant."
+  },
+  {
+    "id": "advance-fee-03",
+    "kind": "message",
+    "label": "positive",
+    "group": "advance-fee",
+    "input": "Wire transfer required to release a dormant fund to your account."
+  },
+  {
+    "id": "advance-fee-04",
+    "kind": "message",
+    "label": "positive",
+    "group": "advance-fee",
+    "input": "Pay us with a gift card to clear this unexpected tax debt."
+  },
+  {
+    "id": "investment-01",
+    "kind": "message",
+    "label": "positive",
+    "group": "investment",
+    "input": "Guaranteed returns: double your money when you send money today."
+  },
+  {
+    "id": "investment-02",
+    "kind": "message",
+    "label": "positive",
+    "group": "investment",
+    "input": "Risk-free profit from our secret investment. Pay us to join."
+  },
+  {
+    "id": "investment-03",
+    "kind": "message",
+    "label": "positive",
+    "group": "investment",
+    "input": "Guaranteed profit every hour. Make a wire transfer to start."
+  },
+  {
+    "id": "jobs-01",
+    "kind": "message",
+    "label": "positive",
+    "group": "jobs",
+    "input": "Job offer: work from home. Pay a registration fee before your interview."
+  },
+  {
+    "id": "jobs-02",
+    "kind": "message",
+    "label": "positive",
+    "group": "jobs",
+    "input": "Hiring immediately for a remote position. Send money to reserve your role."
+  },
+  {
+    "id": "jobs-03",
+    "kind": "message",
+    "label": "positive",
+    "group": "jobs",
+    "input": "New job offer in Lagos. Pay a processing fee for onboarding."
+  },
+  {
+    "id": "delivery-01",
+    "kind": "message",
+    "label": "positive",
+    "group": "delivery",
+    "input": "Delivery failed. Pay a redelivery fee at https://parcel-check.invalid now."
+  },
+  {
+    "id": "delivery-02",
+    "kind": "message",
+    "label": "positive",
+    "group": "delivery",
+    "input": "Package held at customs. Send money for the customs fee."
+  },
+  {
+    "id": "delivery-03",
+    "kind": "message",
+    "label": "positive",
+    "group": "delivery",
+    "input": "Your parcel awaiting delivery needs a fee: https://dhl.check-package.invalid/collect"
+  },
+  {
+    "id": "social-engineering-01",
+    "kind": "message",
+    "label": "positive",
+    "group": "social-engineering",
+    "input": "I am your manager: buy a gift card and send the codes right away."
+  },
+  {
+    "id": "social-engineering-02",
+    "kind": "message",
+    "label": "positive",
+    "group": "social-engineering",
+    "input": "I love you but need help. Send money urgently and move to WhatsApp."
+  },
+  {
+    "id": "social-engineering-03",
+    "kind": "message",
+    "label": "positive",
+    "group": "social-engineering",
+    "input": "Your account locked. Message me on Telegram and provide your passcode."
+  },
+  {
+    "id": "multilingual-01",
+    "kind": "message",
+    "label": "positive",
+    "group": "multilingual",
+    "input": "Abeg bank account don suspend. Send your OTP now to verify your account."
+  },
+  {
+    "id": "multilingual-02",
+    "kind": "message",
+    "label": "positive",
+    "group": "multilingual",
+    "input": "Oga, you won a giveaway. Pay a processing fee make we release am."
+  },
+  {
+    "id": "multilingual-03",
+    "kind": "message",
+    "label": "positive",
+    "group": "multilingual",
+    "input": "Banque: envoyez votre mot de passe pour verifier votre compte."
+  },
+  {
+    "id": "multilingual-04",
+    "kind": "message",
+    "label": "positive",
+    "group": "multilingual",
+    "input": "Su cuenta esta bloqueada: envie su contrasena para verificarla."
+  },
+  {
+    "id": "multilingual-05",
+    "kind": "message",
+    "label": "negative",
+    "group": "multilingual",
+    "input": "E kaaro, ipade wa yoo bere ni aago mewa."
+  },
+  {
+    "id": "multilingual-06",
+    "kind": "message",
+    "label": "negative",
+    "group": "multilingual",
+    "input": "Bonjour, notre reunion commence demain matin."
+  },
+  {
+    "id": "multilingual-07",
+    "kind": "message",
+    "label": "negative",
+    "group": "multilingual",
+    "input": "Abeg no share your OTP. Our bank will never ask for your password."
+  },
+  {
+    "id": "ambiguous-01",
+    "kind": "message",
+    "label": "ambiguous",
+    "group": "ambiguous",
+    "input": "Please help me with an urgent payment."
+  },
+  {
+    "id": "ambiguous-02",
+    "kind": "message",
+    "label": "ambiguous",
+    "group": "ambiguous",
+    "input": "Move to WhatsApp so we can discuss the project."
+  },
+  {
+    "id": "ambiguous-03",
+    "kind": "message",
+    "label": "ambiguous",
+    "group": "ambiguous",
+    "input": "My delivery is delayed. What should I do?"
+  },
+  {
+    "id": "ambiguous-04",
+    "kind": "message",
+    "label": "ambiguous",
+    "group": "ambiguous",
+    "input": "Guaranteed returns are a warning sign discussed in this article."
+  },
+  {
+    "id": "benign-url-01",
+    "kind": "url",
+    "label": "negative",
+    "group": "benign-url",
+    "input": "https://example.invalid/"
+  },
+  {
+    "id": "benign-url-02",
+    "kind": "url",
+    "label": "negative",
+    "group": "benign-url",
+    "input": "https://paypal.com/help"
+  },
+  {
+    "id": "benign-url-03",
+    "kind": "url",
+    "label": "negative",
+    "group": "benign-url",
+    "input": "https://bücher.invalid/catalog"
+  },
+  {
+    "id": "benign-url-04",
+    "kind": "url",
+    "label": "negative",
+    "group": "benign-url",
+    "input": "http://192.0.2.10/docs"
+  },
+  {
+    "id": "benign-url-05",
+    "kind": "url",
+    "label": "negative",
+    "group": "benign-url",
+    "input": "https://example.invalid/search?email=user%40example.invalid"
+  },
+  {
+    "id": "benign-url-06",
+    "kind": "url",
+    "label": "negative",
+    "group": "benign-url",
+    "input": "https://a.b.c.d.example.invalid/docs"
+  },
+  {
+    "id": "benign-url-07",
+    "kind": "url",
+    "label": "negative",
+    "group": "benign-url",
+    "input": "https://example.invalid:8443/status"
+  },
+  {
+    "id": "suspicious-url-01",
+    "kind": "url",
+    "label": "positive",
+    "group": "suspicious-url",
+    "input": "https://paypal-login.invalid/signin"
+  },
+  {
+    "id": "suspicious-url-02",
+    "kind": "url",
+    "label": "positive",
+    "group": "suspicious-url",
+    "input": "https://microsoft.secure-check.invalid/login"
+  },
+  {
+    "id": "suspicious-url-03",
+    "kind": "url",
+    "label": "positive",
+    "group": "suspicious-url",
+    "input": "https://paypal.com@credential-collector.invalid/"
+  },
+  {
+    "id": "suspicious-url-04",
+    "kind": "url",
+    "label": "positive",
+    "group": "suspicious-url",
+    "input": "http://192.0.2.99:8443/%2540login"
+  },
+  {
+    "id": "suspicious-url-05",
+    "kind": "url",
+    "label": "positive",
+    "group": "suspicious-url",
+    "input": "https://dhl.parcel-payment.invalid/collect"
+  },
+  {
+    "id": "suspicious-url-06",
+    "kind": "url",
+    "label": "positive",
+    "group": "suspicious-url",
+    "input": "https://amazon-support.invalid/confirm"
+  }
+]

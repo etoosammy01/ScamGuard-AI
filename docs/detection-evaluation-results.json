@@ -1,0 +1,1110 @@
+{
+  "baseline_commit": "7ca51270c5c2c108d3b5d8cbcbbb7d73eb2160e8",
+  "decision_boundary": 25,
+  "baseline": {
+    "dataset_size": 67,
+    "positive": 38,
+    "negative": 25,
+    "ambiguous": 4,
+    "tp": 31,
+    "fp": 1,
+    "tn": 24,
+    "fn": 7,
+    "precision": 0.96875,
+    "recall": 0.8157894736842105,
+    "f1": 0.8857142857142857,
+    "risk_consistent": true,
+    "mock_hybrid_preserved": 67,
+    "cases": [
+      {
+        "id": "benign-01",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-02",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-03",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-04",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 3,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-05",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-06",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-07",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-08",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-09",
+        "expected": "negative",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "fake_prize"
+      },
+      {
+        "id": "benign-10",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-11",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-12",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-13",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-14",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-15",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "bank-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 60,
+        "risk_level": "high",
+        "category": "credential_theft"
+      },
+      {
+        "id": "bank-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "credential_theft"
+      },
+      {
+        "id": "bank-03",
+        "expected": "positive",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "bank-04",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 67,
+        "risk_level": "high",
+        "category": "credential_theft"
+      },
+      {
+        "id": "credentials-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "credential_theft"
+      },
+      {
+        "id": "credentials-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 82,
+        "risk_level": "critical",
+        "category": "credential_theft"
+      },
+      {
+        "id": "credentials-03",
+        "expected": "positive",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "credentials-04",
+        "expected": "positive",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "credentials-05",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "credential_theft"
+      },
+      {
+        "id": "prize-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "fake_prize"
+      },
+      {
+        "id": "prize-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "fake_prize"
+      },
+      {
+        "id": "prize-03",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "fake_prize"
+      },
+      {
+        "id": "advance-fee-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "advance_fee"
+      },
+      {
+        "id": "advance-fee-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "advance_fee"
+      },
+      {
+        "id": "advance-fee-03",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "advance_fee"
+      },
+      {
+        "id": "advance-fee-04",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "advance_fee"
+      },
+      {
+        "id": "investment-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "investment_scam"
+      },
+      {
+        "id": "investment-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "investment_scam"
+      },
+      {
+        "id": "investment-03",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "investment_scam"
+      },
+      {
+        "id": "jobs-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 25,
+        "risk_level": "moderate",
+        "category": "job_scam"
+      },
+      {
+        "id": "jobs-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 25,
+        "risk_level": "moderate",
+        "category": "job_scam"
+      },
+      {
+        "id": "jobs-03",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 25,
+        "risk_level": "moderate",
+        "category": "job_scam"
+      },
+      {
+        "id": "delivery-01",
+        "expected": "positive",
+        "predicted": "negative",
+        "score": 20,
+        "risk_level": "low",
+        "category": "delivery_scam"
+      },
+      {
+        "id": "delivery-02",
+        "expected": "positive",
+        "predicted": "negative",
+        "score": 20,
+        "risk_level": "low",
+        "category": "delivery_scam"
+      },
+      {
+        "id": "delivery-03",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "phishing"
+      },
+      {
+        "id": "social-engineering-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "advance_fee"
+      },
+      {
+        "id": "social-engineering-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 45,
+        "risk_level": "moderate",
+        "category": "advance_fee"
+      },
+      {
+        "id": "social-engineering-03",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 62,
+        "risk_level": "high",
+        "category": "credential_theft"
+      },
+      {
+        "id": "multilingual-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 47,
+        "risk_level": "moderate",
+        "category": "credential_theft"
+      },
+      {
+        "id": "multilingual-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "fake_prize"
+      },
+      {
+        "id": "multilingual-03",
+        "expected": "positive",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "multilingual-04",
+        "expected": "positive",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "multilingual-05",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "multilingual-06",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "multilingual-07",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "ambiguous-01",
+        "expected": "ambiguous",
+        "predicted": "negative",
+        "score": 3,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "ambiguous-02",
+        "expected": "ambiguous",
+        "predicted": "negative",
+        "score": 15,
+        "risk_level": "low",
+        "category": "general_social_engineering"
+      },
+      {
+        "id": "ambiguous-03",
+        "expected": "ambiguous",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "ambiguous-04",
+        "expected": "ambiguous",
+        "predicted": "negative",
+        "score": 18,
+        "risk_level": "low",
+        "category": "investment_scam"
+      },
+      {
+        "id": "benign-url-01",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-url-02",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-url-03",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 12,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-url-04",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 18,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-url-05",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 12,
+        "risk_level": "low",
+        "category": "phishing"
+      },
+      {
+        "id": "benign-url-06",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 15,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-url-07",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 12,
+        "risk_level": "low",
+        "category": "phishing"
+      },
+      {
+        "id": "suspicious-url-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 25,
+        "risk_level": "moderate",
+        "category": "phishing"
+      },
+      {
+        "id": "suspicious-url-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 28,
+        "risk_level": "moderate",
+        "category": "phishing"
+      },
+      {
+        "id": "suspicious-url-03",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "phishing"
+      },
+      {
+        "id": "suspicious-url-04",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 42,
+        "risk_level": "moderate",
+        "category": "phishing"
+      },
+      {
+        "id": "suspicious-url-05",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 28,
+        "risk_level": "moderate",
+        "category": "phishing"
+      },
+      {
+        "id": "suspicious-url-06",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 25,
+        "risk_level": "moderate",
+        "category": "phishing"
+      }
+    ]
+  },
+  "hardened": {
+    "dataset_size": 67,
+    "positive": 38,
+    "negative": 25,
+    "ambiguous": 4,
+    "tp": 34,
+    "fp": 0,
+    "tn": 25,
+    "fn": 4,
+    "precision": 1,
+    "recall": 0.8947368421052632,
+    "f1": 0.9444444444444444,
+    "risk_consistent": true,
+    "mock_hybrid_preserved": 67,
+    "cases": [
+      {
+        "id": "benign-01",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-02",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-03",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-04",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 3,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-05",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-06",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-07",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-08",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-09",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-10",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-11",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-12",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-13",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-14",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-15",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "bank-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 60,
+        "risk_level": "high",
+        "category": "credential_theft"
+      },
+      {
+        "id": "bank-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "credential_theft"
+      },
+      {
+        "id": "bank-03",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "credential_theft"
+      },
+      {
+        "id": "bank-04",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 67,
+        "risk_level": "high",
+        "category": "credential_theft"
+      },
+      {
+        "id": "credentials-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "credential_theft"
+      },
+      {
+        "id": "credentials-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 82,
+        "risk_level": "critical",
+        "category": "credential_theft"
+      },
+      {
+        "id": "credentials-03",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "credential_theft"
+      },
+      {
+        "id": "credentials-04",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "credential_theft"
+      },
+      {
+        "id": "credentials-05",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "credential_theft"
+      },
+      {
+        "id": "prize-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "fake_prize"
+      },
+      {
+        "id": "prize-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "fake_prize"
+      },
+      {
+        "id": "prize-03",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "fake_prize"
+      },
+      {
+        "id": "advance-fee-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "advance_fee"
+      },
+      {
+        "id": "advance-fee-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "advance_fee"
+      },
+      {
+        "id": "advance-fee-03",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "advance_fee"
+      },
+      {
+        "id": "advance-fee-04",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "advance_fee"
+      },
+      {
+        "id": "investment-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "investment_scam"
+      },
+      {
+        "id": "investment-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "investment_scam"
+      },
+      {
+        "id": "investment-03",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "investment_scam"
+      },
+      {
+        "id": "jobs-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 25,
+        "risk_level": "moderate",
+        "category": "job_scam"
+      },
+      {
+        "id": "jobs-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 25,
+        "risk_level": "moderate",
+        "category": "job_scam"
+      },
+      {
+        "id": "jobs-03",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 25,
+        "risk_level": "moderate",
+        "category": "job_scam"
+      },
+      {
+        "id": "delivery-01",
+        "expected": "positive",
+        "predicted": "negative",
+        "score": 20,
+        "risk_level": "low",
+        "category": "delivery_scam"
+      },
+      {
+        "id": "delivery-02",
+        "expected": "positive",
+        "predicted": "negative",
+        "score": 20,
+        "risk_level": "low",
+        "category": "delivery_scam"
+      },
+      {
+        "id": "delivery-03",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "phishing"
+      },
+      {
+        "id": "social-engineering-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "advance_fee"
+      },
+      {
+        "id": "social-engineering-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 45,
+        "risk_level": "moderate",
+        "category": "advance_fee"
+      },
+      {
+        "id": "social-engineering-03",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 62,
+        "risk_level": "high",
+        "category": "credential_theft"
+      },
+      {
+        "id": "multilingual-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 47,
+        "risk_level": "moderate",
+        "category": "credential_theft"
+      },
+      {
+        "id": "multilingual-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 35,
+        "risk_level": "moderate",
+        "category": "fake_prize"
+      },
+      {
+        "id": "multilingual-03",
+        "expected": "positive",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "multilingual-04",
+        "expected": "positive",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "multilingual-05",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "multilingual-06",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "multilingual-07",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "ambiguous-01",
+        "expected": "ambiguous",
+        "predicted": "negative",
+        "score": 3,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "ambiguous-02",
+        "expected": "ambiguous",
+        "predicted": "negative",
+        "score": 15,
+        "risk_level": "low",
+        "category": "general_social_engineering"
+      },
+      {
+        "id": "ambiguous-03",
+        "expected": "ambiguous",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "ambiguous-04",
+        "expected": "ambiguous",
+        "predicted": "negative",
+        "score": 18,
+        "risk_level": "low",
+        "category": "investment_scam"
+      },
+      {
+        "id": "benign-url-01",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-url-02",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 0,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-url-03",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 12,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-url-04",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 18,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-url-05",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 12,
+        "risk_level": "low",
+        "category": "phishing"
+      },
+      {
+        "id": "benign-url-06",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 15,
+        "risk_level": "low",
+        "category": "unknown"
+      },
+      {
+        "id": "benign-url-07",
+        "expected": "negative",
+        "predicted": "negative",
+        "score": 12,
+        "risk_level": "low",
+        "category": "phishing"
+      },
+      {
+        "id": "suspicious-url-01",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 25,
+        "risk_level": "moderate",
+        "category": "phishing"
+      },
+      {
+        "id": "suspicious-url-02",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 28,
+        "risk_level": "moderate",
+        "category": "phishing"
+      },
+      {
+        "id": "suspicious-url-03",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 30,
+        "risk_level": "moderate",
+        "category": "phishing"
+      },
+      {
+        "id": "suspicious-url-04",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 42,
+        "risk_level": "moderate",
+        "category": "phishing"
+      },
+      {
+        "id": "suspicious-url-05",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 28,
+        "risk_level": "moderate",
+        "category": "phishing"
+      },
+      {
+        "id": "suspicious-url-06",
+        "expected": "positive",
+        "predicted": "positive",
+        "score": 25,
+        "risk_level": "moderate",
+        "category": "phishing"
+      }
+    ]
+  }
+}

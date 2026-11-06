@@ -144,6 +144,7 @@ func TestAuthenticationIntegration(t *testing.T) {
 			strings.Replace(payload("mismatch@example.com"), `"confirm_password":"`+testPassword+`"`, `"confirm_password":"different"`, 1),
 			strings.Replace(payload("large@example.com"), "Test User", strings.Repeat("x", 17000), 1),
 			payload("valid@example.com") + `{}`,
+			strings.TrimSuffix(payload("valid@example.com"), "}") + `,"email":"other@example.com"}`,
 		} {
 			requireCode(request(newApp(), "POST", "/api/v1/auth/register", body, origin, nil), 400)
 		}
@@ -371,6 +372,44 @@ func TestAuthenticationIntegration(t *testing.T) {
 		var count int
 		if err := pool.QueryRow(ctx, "SELECT count(*) FROM sessions WHERE user_id=$1 AND revoked_at IS NULL AND expires_at>now()", user.ID).Scan(&count); err != nil || count != 5 {
 			t.Fatal("missing session cap", count, err)
+		}
+	})
+	t.Run("concurrent session creation preserves cap", func(t *testing.T) {
+		store := &repository.Accounts{DB: pool}
+		outcomes := make(chan error, 8)
+		for i := 0; i < 8; i++ {
+			go func() {
+				raw := make([]byte, 32)
+				if _, err := rand.Read(raw); err != nil {
+					outcomes <- err
+					return
+				}
+				outcomes <- store.CreateSession(ctx, user.ID, raw, nil, time.Now().Add(time.Hour))
+			}()
+		}
+		for i := 0; i < 8; i++ {
+			if err := <-outcomes; err != nil {
+				t.Fatal(err)
+			}
+		}
+		var active int
+		if err := pool.QueryRow(ctx, "SELECT count(*) FROM sessions WHERE user_id=$1 AND revoked_at IS NULL AND expires_at>now()", user.ID).Scan(&active); err != nil || active != 5 {
+			t.Fatal("concurrent cap failed", active, err)
+		}
+	})
+	t.Run("database unavailable fails closed", func(t *testing.T) {
+		broken, err := pgxpool.NewWithConfig(ctx, cfg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		broken.Close()
+		app := router.New(broken, []string{origin}, router.AuthOptions{Service: &services.Auth{Store: &repository.Accounts{DB: broken}}, Config: configuration})
+		response := request(app, "GET", "/api/v1/auth/me", "", "", cookie)
+		requireCode(response, 503)
+		for _, private := range []string{"postgres://", "password_hash", "stack", "/home/"} {
+			if strings.Contains(response.Body.String(), private) {
+				t.Fatal("internal failure leaked details")
+			}
 		}
 	})
 	t.Run("migration rollback preserves accounts", func(t *testing.T) {

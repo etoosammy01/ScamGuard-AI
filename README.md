@@ -28,7 +28,7 @@ Browser → Next.js App Router (3000)
           authentication middleware → services → repository
 ```
 
-Go 1.25+ is the source minimum (`backend/go.mod`); use a maintained Go release, as CI does. Frontend uses Node.js 24 LTS, Next.js 16, React 19, TypeScript, Tailwind CSS 4, and Lucide. Compose and CI use PostgreSQL 17; SQL is compatible with PostgreSQL 16+. Dependencies are locked in `go.sum` and `package-lock.json`.
+Go 1.26.10+ is the source minimum (`backend/go.mod`); use a maintained Go release, as CI does. Frontend uses Node.js 24 LTS, Next.js 16, React 19, TypeScript, Tailwind CSS 4, and Lucide. Compose and CI use PostgreSQL 17; SQL is compatible with PostgreSQL 16+. Dependencies are locked in `go.sum` and `package-lock.json`.
 
 `cmd/server` owns startup/shutdown; internal packages separate configuration, handlers, middleware, models, services, repositories, database infrastructure, and the deterministic `internal/detection` rule engine. The engine performs syntax-only URL inspection and never opens submitted links or resolves DNS. The frontend retains the Phase 1 components and adds account pages, an authentication context, API client, route guards, and authenticated scanner forms. Protected pages are static shells: account information is fetched from the authenticated API and is not embedded in cached HTML. Browser guards provide navigation behavior; the API remains the authorization boundary.
 
@@ -212,7 +212,7 @@ go run ./cmd/migrate up     # reapply pending versions
 The runner discovers embedded SQL versions, uses the existing `schema_migrations` table and advisory transaction lock, and applies changes transactionally. **`down` now rolls back one version**, extending Phase 1's single-version behavior. It refuses unknown database versions. Do not edit deployed migrations; create the next numbered pair. Back up data before rollback.
 
 - `001_initial`: preserved unchanged; users, scans, original constraints/indexes, update timestamp trigger.
-- `002_authentication`: adds optional bio (default empty), a unique index on `lower(btrim(email))`, and sessions with user foreign key/cascade deletion, unique 32-byte token hash, creation/expiry/revocation timestamps, and user/expiry indexes. Existing users/scans remain intact. Conflicting legacy emails must be resolved before migration; the migration fails atomically rather than silently deleting/merging accounts.
+- `002_authentication`: adds optional bio (default empty), a unique index on `lower(btrim(email))`, and sessions with user foreign key/cascade deletion, unique 32-byte session digest, creation/expiry/revocation timestamps, and user/expiry indexes. Existing users/scans remain intact. Conflicting legacy emails must be resolved before migration; the migration fails atomically rather than silently deleting/merging accounts.
 - `003_private_scans`: removes legacy raw `input_text` and free-text `explanation` from existing scan rows, preserving IDs, ownership, timestamps, and score; adds constrained category and JSONB indicators; restricts scan types to supported types and reclassifies old risk levels to the Phase 3 score bands. It never copies raw old input into a new field. Rollback restores schema shape with a fixed redaction marker and empty explanation; deleted content cannot be recovered.
 - `004_ai_analysis`: adds constrained `analysis_mode`, `ai_status`, and `rule_score` metadata, extends categories for Phase 4 classifications, and preserves existing rows. At this point explanations and recommendations were response-only.
 - `005_scan_history`: adds bounded explanation and JSON recommendation metadata for newly saved results (without restoring any original submission), plus owner/filter/time indexes. Existing rows receive a legacy explanation marker and empty recommendations; prior provider prose cannot be reconstructed. Rollback removes these additions and indexes without deleting scan records.
@@ -488,3 +488,48 @@ The script changes disposable account status and creates audit records. Never ru
 production. CI also runs the existing authentication/scanner/history browser regression suite.
 
 Executed Phase 6 results and the complete file inventory: [implementation report](docs/PHASE6-IMPLEMENTATION.md).
+
+## Phase 7: security hardening and measurable verification
+
+Phase 7 builds on the still-unmerged Phase 6 PR #6; main was fetched before development.
+See [security audit](docs/security-audit.md), [detection evaluation](docs/detection-evaluation.md),
+and [production readiness](docs/production-readiness.md). No deployment or automatic merge is performed.
+
+Hardening rejects ambiguous JSON, limits provider responses and total retry time, disables AI
+redirects, improves credential redaction and sentence-scoped detection, validates URL host/port
+structure without fetching URLs, and pins CI actions to official immutable release SHAs.
+Dependencies use the supported Go 1.26.10 toolchain and compatible advisory fixes; x/crypto is
+pinned to the exact fixed OpenPGP-removal revision cited by the Go database, pending a stable tag.
+The scanner only uses its Argon2 API; no OpenPGP code is used.
+
+Reproduce locally from `backend` with a **disposable** migrated PostgreSQL database:
+
+```sh
+go run ./cmd/migrate up
+TEST_DATABASE_URL="$DATABASE_URL" go test -race ./...
+go vet ./...
+go run ./cmd/evaluate
+go test ./internal/detection -run='^$' -fuzz=FuzzURLParser -fuzztime=5s -parallel=2
+go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+govulncheck -show verbose ./...
+```
+
+From `frontend`: `npm ci`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`,
+and `npm audit --audit-level=low`. Browser suites use the existing Node/Chrome DevTools framework,
+restricted to loopback URLs: `npm run test:browser`, `npm run test:security-browser`, and
+`SMOKE_ADMIN_BINARY=/tmp/scamguard-admin SMOKE_EXPECT_PAGINATION=1 npm run test:admin-browser`.
+Compile the operator binary and seed at least 21 synthetic users in the disposable database for
+the admin pagination check, as CI does. Restart the local API between suites to isolate in-memory
+rate limits. The security journey downloads real PDF/CSV files into a private temporary directory
+and removes them after testing. No live AI credentials/subscription are required.
+
+For redacted source/history scanning, install
+`go install github.com/zricethezav/gitleaks/v8@v8.30.1`, then run
+`python3 scripts/scan-secrets.py` from the repository. It snapshots tracked/non-ignored source,
+not generated build caches or ignored `.env` files. Exactly one historical documentation prose
+fingerprint is excluded; no broad secret detection rule/path is disabled.
+
+The 67-case synthetic corpus has 38 positive, 25 benign and four ambiguous examples. Hardened
+rules produced 34 TP, 25 TN, zero FP and four FN at the unchanged score-25 review boundary.
+This is regression evidence, not statistically validated real-world accuracy. Real-model quality,
+representative hold-out validation and production operational checks remain separate release gates.

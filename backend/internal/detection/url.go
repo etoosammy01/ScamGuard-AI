@@ -7,7 +7,10 @@ import (
 	"golang.org/x/net/publicsuffix"
 	"net"
 	"net/url"
+	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 var ErrInvalidURL = errors.New("invalid URL")
@@ -15,6 +18,14 @@ var shorteners = map[string]bool{"bit.ly": true, "t.co": true, "tinyurl.com": tr
 var brandTerms = []string{"paypal", "microsoft", "apple", "amazon", "google", "facebook", "instagram", "netflix", "bankofamerica", "chase", "wellsfargo", "dhl", "fedex", "ups"}
 
 func AnalyzeURL(raw string) (models.ScanResult, error) {
+	if len(raw) > 2048 || !utf8.ValidString(raw) {
+		return models.ScanResult{}, ErrInvalidURL
+	}
+	for _, r := range raw {
+		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) || r == '\\' {
+			return models.ScanResult{}, ErrInvalidURL
+		}
+	}
 	trimmed := strings.TrimSpace(raw)
 	u, err := url.Parse(trimmed)
 	if err != nil || u == nil || u.Host == "" {
@@ -32,6 +43,27 @@ func AnalyzeURL(raw string) (models.ScanResult, error) {
 	if net.ParseIP(host) == nil {
 		ascii, err = idna.Lookup.ToASCII(host)
 		if err != nil {
+			return models.ScanResult{}, ErrInvalidURL
+		}
+	}
+	if net.ParseIP(ascii) == nil {
+		if len(ascii) > 253 {
+			return models.ScanResult{}, ErrInvalidURL
+		}
+		for _, label := range strings.Split(ascii, ".") {
+			if len(label) == 0 || len(label) > 63 || label[0] == '-' || label[len(label)-1] == '-' {
+				return models.ScanResult{}, ErrInvalidURL
+			}
+			for _, ch := range label {
+				if !(ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch >= '0' && ch <= '9' || ch == '-') {
+					return models.ScanResult{}, ErrInvalidURL
+				}
+			}
+		}
+	}
+	if port := u.Port(); port != "" {
+		n, err := strconv.Atoi(port)
+		if err != nil || n < 1 || n > 65535 {
 			return models.ScanResult{}, ErrInvalidURL
 		}
 	}

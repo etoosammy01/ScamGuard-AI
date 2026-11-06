@@ -1,10 +1,12 @@
 // Runs against disposable, already-started API/frontend servers and a separate headless Chrome.
 // Uses Node 24's WebSocket support, so no browser-testing dependency is required.
 import assert from "node:assert/strict";
+import { assertLocalTargets } from "./local-targets.mjs";
 import { randomUUID } from "node:crypto";
 const app = process.env.SMOKE_APP_URL ?? "http://localhost:3000";
 const api = process.env.SMOKE_API_URL ?? "http://localhost:8080";
 const debug = process.env.CHROME_DEBUG_URL ?? "http://127.0.0.1:9224";
+assertLocalTargets([app, api, debug]);
 const target = await (
   await fetch(`${debug}/json/new?about:blank`, { method: "PUT" })
 ).json();
@@ -64,7 +66,9 @@ async function waitFor(expression, label) {
     }
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
-  const state = await evaluate(`({path:location.pathname, text:document.body.innerText.slice(0,1200)})`).catch(() => null);
+  const state = await evaluate(
+    `({path:location.pathname, text:document.body.innerText.slice(0,1200)})`,
+  ).catch(() => null);
   throw new Error(`Timed out: ${label}; state=${JSON.stringify(state)}`);
 }
 async function navigate(path) {
@@ -79,7 +83,9 @@ async function submit() {
   await evaluate('document.querySelector("form").requestSubmit()');
 }
 async function fillScanner(value) {
-  await evaluate(`(() => { const field=document.querySelector('#scan-input'); const prototype=field.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(prototype,'value').set.call(field,${JSON.stringify(value)}); field.dispatchEvent(new Event('input',{bubbles:true})); })()`);
+  await evaluate(
+    `(() => { const field=document.querySelector('#scan-input'); const prototype=field.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(prototype,'value').set.call(field,${JSON.stringify(value)}); field.dispatchEvent(new Event('input',{bubbles:true})); })()`,
+  );
 }
 const email = `browser-${randomUUID()}@example.invalid`,
   password = "Synthetic secure passphrase 2026";
@@ -145,24 +151,48 @@ try {
   );
   await navigate("/scan/message");
   await waitFor(`!!document.querySelector('#scan-input')`, "message scanner");
-  await fillScanner("URGENT: Your bank account has been suspended. Verify your password at https://secure-login.invalid/verify");
+  await fillScanner(
+    "URGENT: Your bank account has been suspended. Verify your password at https://secure-login.invalid/verify",
+  );
   await submit();
-  await waitFor(`!!document.querySelector('.result-card') && document.querySelectorAll('.indicator-list li').length > 0`, "message scan result and indicators");
+  await waitFor(
+    `!!document.querySelector('.result-card') && document.querySelectorAll('.indicator-list li').length > 0`,
+    "message scan result and indicators",
+  );
   await navigate("/scan/url");
   await waitFor(`!!document.querySelector('#scan-input')`, "URL scanner");
   await fillScanner("https://paypal-example.com/login");
   await submit();
   await waitFor(`!!document.querySelector('.result-card')`, "URL scan result");
-  console.log("Authenticated message and URL scans returned real rule-based results");
+  console.log(
+    "Authenticated message and URL scans returned real rule-based results",
+  );
   await navigate("/dashboard");
-  await waitFor(`document.body.innerText.includes('Total scans') && document.body.innerText.includes('Recent scans')`, "authenticated dashboard history and analytics");
-  assert(await evaluate(`document.body.innerText.includes('2') && document.body.innerText.includes('View Scan History')`), "real saved scan data appears on dashboard");
+  await waitFor(
+    `document.body.innerText.includes('Total scans') && document.body.innerText.includes('Recent scans')`,
+    "authenticated dashboard history and analytics",
+  );
+  assert(
+    await evaluate(
+      `document.body.innerText.includes('2') && document.body.innerText.includes('View Scan History')`,
+    ),
+    "real saved scan data appears on dashboard",
+  );
   await navigate("/history");
-  await waitFor(`!!document.querySelector('.history-count') && document.querySelectorAll('.history-table tbody tr').length===2`, "owner scan history");
+  await waitFor(
+    `!!document.querySelector('.history-count') && document.querySelectorAll('.history-table tbody tr').length===2`,
+    "owner scan history",
+  );
   await evaluate(`document.querySelector('.history-table tbody a').click()`);
-  await waitFor(`!!document.querySelector('.scan-detail-card') && document.body.innerText.includes('unavailable; original content is not stored')`, "retained scan details and privacy disclosure");
+  await waitFor(
+    `!!document.querySelector('.scan-detail-card') && document.body.innerText.includes('unavailable; original content is not stored')`,
+    "retained scan details and privacy disclosure",
+  );
   await navigate("/dashboard");
-  await waitFor(`document.body.innerText.includes('Total scans')`, "dashboard after details navigation");
+  await waitFor(
+    `document.body.innerText.includes('Total scans')`,
+    "dashboard after details navigation",
+  );
   const { cookies } = await call("Storage.getCookies");
   const session = cookies.find(
     (cookie) =>
@@ -196,6 +226,11 @@ try {
       deviceScaleFactor: 1,
       mobile: width < 500,
     });
+    // Responsive charts resize through ResizeObserver after the viewport changes.
+    await waitFor(
+      "document.documentElement.scrollWidth<=innerWidth",
+      `settled dashboard width ${width}`,
+    );
     assert(
       await evaluate("document.documentElement.scrollWidth<=innerWidth"),
       `dashboard horizontal overflow at ${width}`,
@@ -259,7 +294,9 @@ try {
   );
   assert(
     mutations.every((url) =>
-      /\/api\/v1\/(auth\/(login|register|logout)|users\/me|scans\/(message|url))$/.test(url),
+      /\/api\/v1\/(auth\/(login|register|logout)|users\/me|scans\/(message|url))$/.test(
+        url,
+      ),
     ),
     "no scanner submission or unexpected mutation",
   );

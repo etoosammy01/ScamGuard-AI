@@ -137,3 +137,12 @@ func TestCSVExportAndFormulaInjection(t *testing.T) {
 		t.Fatal(w.Code)
 	}
 }
+
+func TestCSVExportRowLimit(t *testing.T) {
+	store := &fakeHistoryStore{rows: make([]models.ScanResult, 10001)}
+	w := httptest.NewRecorder()
+	historyRouter(store).ServeHTTP(w, httptest.NewRequest("GET", "/scans/export", nil))
+	if w.Code != 413 {
+		t.Fatal("oversized export accepted", w.Code)
+	}
+}

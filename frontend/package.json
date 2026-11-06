@@ -13,7 +13,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "tsx --test tests/*.test.tsx",
     "test:browser": "node scripts/auth-smoke.mjs",
-    "test:admin-browser": "node scripts/admin-smoke.mjs"
+    "test:admin-browser": "node scripts/admin-smoke.mjs",
+    "test:security-browser": "node scripts/security-smoke.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.69.0",
