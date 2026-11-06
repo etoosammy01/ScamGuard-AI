@@ -4,8 +4,9 @@
 
 Reviewed 2026-11-06. Latest fetched `main` was `dbda5cd` (Phase 5). Phase 6 remained in
 PR #6; this feature branch retains `7ca5127` as a prerequisite without merging main or
-that PR. Review scope includes its report/admin implementation. Phase 7 PR review must
-account for this dependency; no deployment or Phase 8 work was performed.
+that PR. Review scope includes its report/admin implementation. Phase 6 subsequently merged
+into main as `e719e2b` through a separate action before PR #7 opened, so its diff contains
+only Phase 7 changes. No deployment or Phase 8 work was performed.
 
 Evidence came from source inspection, synthetic adversarial regressions, a 67-case versioned
 corpus compared with the unchanged Phase 6 baseline, disposable PostgreSQL integration tests,
@@ -117,8 +118,8 @@ must be verified without breaking Next hydration. Local readiness is not product
 
 ## Phase 7 file inventory
 
-This inventory is relative to the Phase 6 prerequisite; the PR against main also contains
-that unmerged prerequisite until PR #6 is reviewed/merged.
+This inventory is relative to the Phase 6 baseline. Phase 6 merged into main during the
+review, before PR #7 was opened; the PR diff contains these Phase 7 changes only.
 
 - `.github/workflows/ci.yml`
 - `.gitleaksignore`

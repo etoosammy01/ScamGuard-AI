@@ -1,8 +1,8 @@
 # Production readiness and Phase 7 gate
 
 **No deployment is authorized by Phase 7.** This checklist is an operator/reviewer release gate,
-not a statement that a production environment was inspected. Phase 6 PR #6 is a prerequisite;
-neither it nor the Phase 7 PR is merged automatically.
+not a statement that a production environment was inspected. Phase 6 PR #6 merged into main
+during this work through a separate action. The Phase 7 PR is not merged automatically.
 
 ## Measurable security and test gates
 

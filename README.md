@@ -491,7 +491,8 @@ Executed Phase 6 results and the complete file inventory: [implementation report
 
 ## Phase 7: security hardening and measurable verification
 
-Phase 7 builds on the still-unmerged Phase 6 PR #6; main was fetched before development.
+Phase 7 was developed atop the Phase 6 commit because PR #6 was open at the initial main fetch.
+Phase 6 merged into main as `e719e2b` during this review; PR #7 contains only Phase 7 changes.
 See [security audit](docs/security-audit.md), [detection evaluation](docs/detection-evaluation.md),
 and [production readiness](docs/production-readiness.md). No deployment or automatic merge is performed.
 
