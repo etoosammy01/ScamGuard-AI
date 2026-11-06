@@ -37,7 +37,7 @@ func (a *Accounts) CreateUser(ctx context.Context, name, email, hash string) err
 func (a *Accounts) Credentials(ctx context.Context, email string) (models.User, string, error) {
 	var u models.User
 	var hash string
-	err := a.DB.QueryRow(ctx, "SELECT "+userColumns+", password_hash FROM users WHERE lower(btrim(email))=$1", email).Scan(&u.ID, &u.FullName, &u.Email, &u.Bio, &u.Role, &u.CreatedAt, &hash)
+	err := a.DB.QueryRow(ctx, "SELECT "+userColumns+", password_hash FROM users WHERE lower(btrim(email))=$1 AND status='active'", email).Scan(&u.ID, &u.FullName, &u.Email, &u.Bio, &u.Role, &u.CreatedAt, &hash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return u, "", ErrNotFound
 	}
@@ -50,8 +50,12 @@ func (a *Accounts) CreateSession(ctx context.Context, userID string, hash, previ
 	}
 	defer tx.Rollback(ctx)
 	// Serialize account logins so the concurrent-session limit remains deterministic.
-	if _, err = tx.Exec(ctx, "SELECT id FROM users WHERE id=$1 FOR UPDATE", userID); err != nil {
+	var active bool
+	if err = tx.QueryRow(ctx, "SELECT status='active' FROM users WHERE id=$1 FOR UPDATE", userID).Scan(&active); err != nil {
 		return err
+	}
+	if !active {
+		return ErrNotFound
 	}
 	if _, err = tx.Exec(ctx, "DELETE FROM sessions WHERE user_id=$1 AND (expires_at<=now() OR revoked_at IS NOT NULL)", userID); err != nil {
 		return err
@@ -74,7 +78,7 @@ func (a *Accounts) CreateSession(ctx context.Context, userID string, hash, previ
 func (a *Accounts) SessionIdentity(ctx context.Context, hash []byte) (models.Identity, error) {
 	var identity models.Identity
 	err := a.DB.QueryRow(ctx, `SELECT u.id,u.role FROM sessions s
- JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now()`, hash).Scan(&identity.ID, &identity.Role)
+ JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND u.status='active'`, hash).Scan(&identity.ID, &identity.Role)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return identity, ErrNotFound
 	}

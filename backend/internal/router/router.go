@@ -1,7 +1,10 @@
 package router
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/etoosammy01/ScamGuard-AI/backend/internal/config"
@@ -28,6 +31,19 @@ func New(db handlers.Pinger, origins []string, options ...AuthOptions) http.Hand
 	r.GET("/api/v1/health/ready", handlers.Ready(db))
 	if len(options) > 0 && options[0].Service != nil {
 		option := options[0]
+		if option.ScanStore != nil {
+			auditStore := &repository.Admin{DB: option.ScanStore.DB}
+			r.Use(func(c *gin.Context) {
+				c.Next()
+				if strings.HasPrefix(c.Request.URL.Path, "/api/v1/admin/") && c.Writer.Status() == http.StatusUnauthorized {
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+					defer cancel()
+					if err := auditStore.Audit(ctx, "", "admin_access_denied", "", "denied"); err != nil {
+						slog.Warn("anonymous admin denial audit failed")
+					}
+				}
+			})
+		}
 		auth := &handlers.Auth{Service: option.Service, Config: option.Config}
 		limiter := middleware.NewRateLimiter(10, 15*time.Minute)
 		r.POST("/api/v1/auth/register", limiter.Middleware(), auth.Register)
@@ -50,6 +66,16 @@ func New(db handlers.Pinger, origins []string, options ...AuthOptions) http.Hand
 			protected.GET("/scans/export", middleware.NewUserRateLimiter(5, time.Hour).Middleware(), history.Export)
 			protected.DELETE("/scans", history.DeleteAll)
 			protected.GET("/scans/:id", history.Get)
+			protected.GET("/scans/:id/report", middleware.NewUserRateLimiter(5, time.Hour).Middleware(), history.Report)
+			admin := &handlers.AdminHandler{Store: &repository.Admin{DB: option.ScanStore.DB}, Started: time.Now(), AIEnabled: option.Config.AIEnabled}
+			a := protected.Group("/admin", admin.Authorize)
+			a.GET("/overview", admin.Overview)
+			a.GET("/users", admin.Users)
+			a.GET("/users/:id", admin.User)
+			a.PATCH("/users/:id/status", admin.Status)
+			a.GET("/analytics", admin.Analytics)
+			a.GET("/audit-logs", admin.AuditLogs)
+			a.GET("/settings", admin.Settings)
 			protected.DELETE("/scans/:id", history.Delete)
 		}
 	}

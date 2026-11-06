@@ -330,3 +330,161 @@ Phases 1–4 provide the application foundation, authentication, local determini
 Branch from current `main`, use focused commits, run the checks above, and document behavior, tests, and limitations in a pull request. Never commit real credentials, environment files, browser profiles, or user data. Do not merge automatically.
 
 Licensed under the [MIT License](LICENSE).
+
+## Phase 6: reports and platform administration
+
+Authenticated scan owners can download **Download Security Report** from `/history/:id`.
+`GET /api/v1/scans/:id/report` reads the existing owner-scoped scan record and streams
+an in-memory `application/pdf` attachment. Missing and other users' scan IDs both return
+404. There is no public report storage. Reports include identifiers, UTC timestamps,
+scores, categories, saved findings/indicators, recommendations and an advisory disclaimer.
+Original content and full AI assessments were not retained by the existing persistence
+schema, so reports explicitly describe their absence; they never reconstruct them or
+call an AI provider. The PDF renderer uses `signintech/gopdf` v0.38.3 and an embedded
+SIL OFL Noto Sans font (license under `backend/internal/reports`). Stored strings are
+plain text, never HTML, executable PDF actions or clickable URLs. Unsupported glyphs
+are visibly replaced with `[?]`; complex script shaping is not guaranteed.
+
+Resource limits: five reports per user/hour/process, two concurrent renderers/process,
+three-second generation context, 32 KB text, 100 indicators, 50 recommendations,
+12 pages and 2 MiB final output. Oversized data is rejected rather than silently omitted.
+Downloads use fixed filenames, `no-store`, `nosniff`, cookie credentials, content-type
+and PDF signature checks. Existing scan endpoints and privacy behavior remain intact.
+
+### Roles and operator provisioning
+
+Registration always creates a `user`. Every admin API requires a valid cookie session
+and a server-derived `admin` role. Navigation is hidden for regular users; UI guards are
+supplementary to backend authorization. There is no HTTP role promotion endpoint.
+
+1. Apply migrations with the existing operator configuration: `cd backend && go run ./cmd/migrate up`.
+2. Register the intended named administrator account through the ordinary registration flow.
+   Verify the account owner's identity out of band before granting access.
+3. On a trusted operator host, authenticate to PostgreSQL using an individually controlled
+   operator database identity (peer authentication or a securely supplied `DATABASE_URL`).
+   Require encrypted `sslmode=verify-full` connections for remote production databases.
+   Do not place credentials in shell history or commit them.
+4. Run `go run ./cmd/admin existing-account@example.com CHANGE-1234` from `backend`.
+   The second argument is a safe operator/ticket reference, **never a password or secret**.
+   This only promotes an existing active account. Promotion and the `admin_provisioned`
+   event commit in one transaction; failure rolls both back. OS/database authentication
+   is the authorization boundary. Restrict command execution and operator credentials.
+   The database session identity is also recorded in safe audit metadata. The reference is an operator assertion, not cryptographic proof of human identity.
+5. Refresh the session/page. Session roles are read from the database on every request.
+
+Use separate schema-owner/migration, operator, and runtime database identities in production.
+Only the operator should have column-level `UPDATE(role)` privileges; the runtime identity
+needs `UPDATE(status)` for suspension, session revocation, ordinary account/profile operations,
+`INSERT/SELECT` on audit logs, and no audit mutation or DDL rights. PostgreSQL table-level
+UPDATE grants override narrower column grants: revoke broad grants before granting individual
+columns. Do not run the application as a database owner or superuser. Review all grants
+against your deployment schema; this migration does not create deployment-specific roles.
+Role removal is an exceptional operator procedure: lock `pg_advisory_xact_lock(734130)`,
+verify another active administrator remains, update the role, revoke that account's sessions,
+and insert an audit event in the same transaction. Do not directly mutate roles without
+these safeguards.
+
+### Administrative API and UI
+
+All paths below are under `/api/v1/admin`, protected by authentication and authorization:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/overview` | Real retained-platform totals and operational readiness |
+| GET | `/users?page=1&search=...` | Name/email search; 20 accounts/page |
+| GET | `/users/:id` | Safe account metadata only |
+| PATCH | `/users/:id/status` | Strict JSON `{ "status": "active" }` or `"suspended"` |
+| GET | `/analytics?days=30` | UTC daily/weekly scans, distributions, registrations; 1–90 days |
+| GET | `/audit-logs?page=1` | Restricted audit events; 20/page |
+| GET | `/settings` | Read-only, non-secret deployment policy |
+
+Pages: `/admin`, `/admin/users`, `/admin/analytics`, `/admin/audit-logs`, `/admin/settings`.
+They share the existing visual system, responsive tables, accessible charts, loading/error/empty
+states, pagination and a focus-contained confirmation dialog. Account metadata does not
+include hashes, session values or submitted scan content. Status endpoints cannot change roles.
+Queries reject unknown/repeated parameters; pagination is capped at page 10,000. SQL is
+parameterized, queries have timeouts, and mutations retain the existing exact trusted-Origin
+CSRF protection. Unsupported settings mutations return 404; settings cannot disable controls.
+
+Suspension is transactional: verify a live active admin, acquire the shared administrator
+lifecycle advisory lock, lock the target, reject self-suspension or loss of the last active
+admin, change status, revoke all sessions, and append an audit event. Login and session
+creation reject suspended accounts; every authenticated request joins the live account status.
+Suspension takes effect on the next authorization check. Already-running requests are not
+cancelled. Reactivation does not restore revoked sessions: the user must sign in again.
+
+### Analytics, monitoring and settings limitations
+
+Metrics count **retained** records, so user deletion of scan history reduces totals. They
+are not lifetime billing counters. Analytics reads a repeatable-read snapshot; date buckets
+use UTC, weeks start Monday, and the selected range begins at UTC midnight. Daily lists omit
+zero-record dates. Charts derive percentages from returned counts, with no fabricated trends.
+Scam categories are capped at 15. Aggregates contain no per-user scan histories.
+AI statuses show actual persisted outcomes (`completed`, `unavailable`, `validation_failed`,
+`rate_limited`, `disabled`, `not_requested`). Disabled/unrequested requests are not failures;
+The hybrid-request fallback rate uses completed plus disabled/rate-limited/unavailable/validation-failed retained scans as its denominator, excluding rules-only not-requested scans. Provider error rate and API latency are not instrumented. Overview shows database ping readiness,
+process uptime, AI enabled/disabled, and actual recent seven-day scan totals. Uptime and rate
+limits are per process; horizontal deployments need shared rate limiting in a future change.
+Public health responses remain minimal.
+
+Settings intentionally remain read-only: existing input limits, scan/AI/report rate policy,
+and the non-secret AI availability flag. No database settings table or editable secrets/model
+instructions are introduced. Future editable settings require a constrained schema, validated
+safe ranges, consistent runtime application, CSRF protection and transactional audit writes.
+
+### Audit storage, retention and integrity
+
+Migration `006_admin.up.sql` adds constrained account status, `audit_logs`, time indexes for
+platform aggregation, and a database trigger rejecting audit UPDATE, DELETE and TRUNCATE.
+Application behavior is append-only. Events record UUID, optional actor ID, action, target,
+UTC timestamp, outcome, and safe metadata. Provisioning, suspension, reactivation and authenticated
+admin authorization denials are recorded. Anonymous 401 admin attempts are recorded best-effort;
+a safe static warning reports audit-write failures. Administrative mutations fail if their
+audit insertion fails. Ordinary profile name/bio edits are not classified as security changes.
+No settings change route exists. No passwords, session tokens, raw scans or secrets are logged.
+
+Audit identifiers intentionally are not cascading foreign keys, preserving events after account
+deletion. The admin API omits contextual metadata. There is no automatic retention purge in this
+phase: operators must define retention according to their needs, monitor table growth, and export
+to restricted backup storage. The immutable trigger means retention maintenance requires a
+privileged, documented operator window. Database owners can disable triggers or rewrite backups;
+logs are not cryptographically signed, externally immutable or tamper-evident against a privileged
+operator. Restrict database rights, monitor privileged changes and secure backups. Unauthorized
+attempts can grow audit volume; deploy edge request limits for sustained hostile traffic.
+Rollback `go run ./cmd/migrate down` removes Phase 6 schema and audit history; export required
+records before rollback. Migration commands apply all pending versions on `up`.
+
+### Phase 6 verification
+
+```sh
+cd backend
+# Use a disposable PostgreSQL database; existing schema integration tests also need migrations.
+go run ./cmd/migrate up
+TEST_DATABASE_URL="$DATABASE_URL" go test ./...
+go vet ./...
+cd ../frontend
+npm ci
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+`TestPhase6Integration` covers live report ownership, RBAC, aggregation, suspension/session
+revocation/reactivation, CSRF, strict status bodies, read-only settings, and audit creation.
+PDF unit tests verify output signatures, bounds, cancellation, stored-text handling and ownership.
+Frontend tests exercise blob credentials/validation/errors, analytics percentages and confirmation
+semantics. Existing scanner/auth/history tests remain in place.
+
+For real Chrome checks, use disposable API/frontend/database servers, compile
+`go build -o /tmp/scamguard-admin ./cmd/admin` from `backend`, and start headless Chrome with
+remote debugging on loopback port 9224. From `frontend` run
+`SMOKE_ADMIN_BINARY=/tmp/scamguard-admin npm run test:admin-browser` with the disposable
+`DATABASE_URL` in the environment. This creates and promotes a synthetic account through the
+operator command, exercises report success/error, role rejection, real admin pages, confirmation,
+suspension/reactivation, audit pagination, and 390px mobile layouts. User-pagination coverage
+requires at least 21 fixture users and `SMOKE_EXPECT_PAGINATION=1` (CI seeds 25 synthetic accounts).
+The script changes disposable account status and creates audit records. Never run it against
+production. CI also runs the existing authentication/scanner/history browser regression suite.
+
+Executed Phase 6 results and the complete file inventory: [implementation report](docs/PHASE6-IMPLEMENTATION.md).

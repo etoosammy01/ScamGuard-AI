@@ -1,7 +1,7 @@
 name: ScamGuard CI
 on:
   push:
-    branches: [main, feature/phase-1-foundation, feature/phase-2-authentication, feature/phase-3-detection-engine, feature/phase-4-ai-detection, feature/phase-5-dashboard-history]
+    branches: [main, feature/phase-1-foundation, feature/phase-2-authentication, feature/phase-3-detection-engine, feature/phase-4-ai-detection, feature/phase-5-dashboard-history, feature/phase-6-admin-reports]
   pull_request:
     branches: [main]
 permissions:
@@ -76,6 +76,9 @@ jobs:
             sleep 1
           done
           npm --prefix frontend run test:browser
+          (cd backend && go build -o /tmp/scamguard-admin ./cmd/admin)
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "INSERT INTO users(full_name,email,password_hash) SELECT 'Pagination Fixture', 'phase6-fixture-'||n||'@example.invalid', 'unusable-test-hash' FROM generate_series(1,25) n"
+          SMOKE_ADMIN_BINARY=/tmp/scamguard-admin SMOKE_EXPECT_PAGINATION=1 npm --prefix frontend run test:admin-browser
   frontend:
     runs-on: ubuntu-latest
     defaults:
